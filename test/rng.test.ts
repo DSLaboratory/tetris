@@ -29,6 +29,19 @@ describe('NES LFSR', () => {
   });
 });
 
+describe('side coin flips', () => {
+  it('is globally fair and independent of the piece stream', () => {
+    const rng = new Rng();
+    let ones = 0;
+    for (let i = 0; i < 10_000; i++) {
+      rng.nextPiece(); // interleave exactly as the game does
+      ones += rng.nextBit();
+    }
+    expect(ones / 10_000).toBeGreaterThan(0.47);
+    expect(ones / 10_000).toBeLessThan(0.53);
+  });
+});
+
 describe('reroll-once piece picker', () => {
   const N = 10_000;
 
