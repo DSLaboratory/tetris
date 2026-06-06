@@ -70,6 +70,8 @@ describe('locking', () => {
     expect(g.piece).toMatchObject({ x: 5, y: 18 }); // still live
     tick(g, IDLE); // 48th frame: gravity fails -> lock
     expect(g.board[19 * WIDTH + 5]).toBe(4); // O id 3 -> stored as 4
+    expect(g.phase).toBe('are'); // entry delay before the next piece
+    tickN(g, 10); // ARE for a bottom-row lock is 10 frames
     expect(g.piece).toMatchObject({ x: 5, y: 0 }); // next piece spawned
   });
 

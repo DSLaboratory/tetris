@@ -37,8 +37,8 @@ describe('DAS (16 / 6)', () => {
     const g = createGame(0); // gravity 48: the charge completes before the lock
     g.piece = { id: 3, rot: 0, x: 9, y: 18 }; // O against the right wall, on the floor
     let prev = g.piece;
-    // Hold right through the lock; stop as soon as the next piece spawns.
-    for (let i = 0; i < 60 && g.piece === prev; i++) tick(g, HOLD_RIGHT);
+    // Hold right through the lock and the ARE; stop when the next piece spawns.
+    for (let i = 0; i < 80 && (g.piece === prev || g.piece === null); i++) tick(g, HOLD_RIGHT);
     expect(g.piece).not.toBe(prev); // a new piece spawned
     expect(g.piece!.x).toBe(5);
     tick(g, HOLD_RIGHT);
@@ -81,6 +81,7 @@ describe('soft drop', () => {
     g.piece = { id: 3, rot: 0, x: 5, y: 18 }; // on the floor
     g.downLocked = false;
     tickN(g, 2, HOLD_DOWN); // soft-drop fails -> lock; Down still held
+    tickN(g, 10, HOLD_DOWN); // ride out the ARE
     expect(g.piece!.y).toBe(0); // fresh piece
     tickN(g, 10, HOLD_DOWN);
     expect(g.piece!.y).toBe(0); // gravity (48f) governs; soft drop is locked out

@@ -5,7 +5,7 @@ import {
 } from './pieces';
 import {
   gravityFrames, scoreForLines, levelForLines, MAX_SCORE, CLEAR_FRAMES,
-  SOFT_DROP_FRAMES, DAS_CHARGED, DAS_RELOAD,
+  SOFT_DROP_FRAMES, DAS_CHARGED, DAS_RELOAD, areFrames,
 } from './tables';
 import { Rng, DEFAULT_SEED } from './rng';
 
@@ -25,7 +25,7 @@ export interface InputFrame {
   startPressed: boolean;
 }
 
-export type Phase = 'falling' | 'clearing' | 'gameover';
+export type Phase = 'falling' | 'clearing' | 'are' | 'gameover';
 
 export interface ActivePiece {
   id: PieceId;
@@ -63,6 +63,9 @@ export interface Game {
   // rows blank out, exactly as the NES pauses during its clear animation.
   clearCounter: number;
   clearingRows: number[];
+  // ARE (entry delay): 10-18 frames between lock and next spawn, set by
+  // how low the piece locked. DAS keeps charging during it.
+  areCounter: number;
   rng: Rng;
 }
 
@@ -85,6 +88,7 @@ export function createGame(startLevel: number, seed: number = DEFAULT_SEED): Gam
     downLocked: true,
     clearCounter: 0,
     clearingRows: [],
+    areCounter: 0,
     rng,
   };
   spawnPiece(game);
@@ -163,12 +167,16 @@ function lock(g: Game): void {
     })
     .sort((a, b) => a - b);
 
+  // Entry delay depends on how low the piece locked (its lowest cell row).
+  const lockRow = Math.max(...cellsOf(p.id, p.rot).map(([, dy]) => p.y + dy));
+  g.areCounter = areFrames(lockRow);
+
   if (full.length > 0) {
-    g.phase = 'clearing';
+    g.phase = 'clearing'; // ARE runs after the clear freeze
     g.clearCounter = CLEAR_FRAMES;
     g.clearingRows = full;
   } else {
-    spawnPiece(g);
+    g.phase = 'are';
   }
 }
 
@@ -186,7 +194,17 @@ function finishClear(g: Game): void {
   g.level = Math.max(g.level, levelForLines(g.startLevel, g.lines));
   g.score = Math.min(MAX_SCORE, g.score + scoreForLines(cleared) * (g.level + 1));
 
-  spawnPiece(g);
+  g.phase = 'are'; // areCounter was set at lock time
+}
+
+// With no live piece (clear freeze, ARE) there is nothing to shift, but the
+// DAS counter still responds to the d-pad: a press zeroes it, holding
+// charges it. Holding through ARE is how a charged piece flies at spawn.
+function chargeDasDuringDelay(g: Game, input: InputFrame): void {
+  if (input.leftPressed || input.rightPressed) g.das = 0;
+  else if (input.leftHeld !== input.rightHeld) {
+    if (g.das < DAS_CHARGED) g.das++;
+  }
 }
 
 // Held left/right under DAS rules. The NES checks Down first and skips
@@ -244,7 +262,14 @@ export function tick(g: Game, input: InputFrame): void {
   if (g.paused) return;
 
   if (g.phase === 'clearing') {
+    chargeDasDuringDelay(g, input);
     if (--g.clearCounter <= 0) finishClear(g);
+    return;
+  }
+
+  if (g.phase === 'are') {
+    chargeDasDuringDelay(g, input);
+    if (--g.areCounter <= 0) spawnPiece(g);
     return;
   }
 
