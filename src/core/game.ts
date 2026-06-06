@@ -5,6 +5,7 @@ import {
 } from './pieces';
 import {
   gravityFrames, scoreForLines, levelForLines, MAX_SCORE, CLEAR_FRAMES,
+  SOFT_DROP_FRAMES, DAS_CHARGED, DAS_RELOAD,
 } from './tables';
 import { Rng, DEFAULT_SEED } from './rng';
 
@@ -45,6 +46,19 @@ export interface Game {
   score: number;
   lines: number;
   gravityCounter: number;
+  // DAS (delayed auto-shift): a fresh press moves immediately and zeroes
+  // the counter; holding charges it 1/frame; at 16 the piece shifts and
+  // the counter reloads to 10 (so repeats fire every 6 frames). A BLOCKED
+  // shift leaves it at 16 - that is wall charging.
+  das: number;
+  // Soft drop: one row per 2 frames while Down is held. The pushdown
+  // counter tracks rows of the current uninterrupted descent and is
+  // awarded as points if the piece locks mid-drop; releasing Down resets it.
+  softCounter: number;
+  pushdown: number;
+  // Down must be RELEASED after a spawn before soft drop applies again,
+  // so holding Down through a lock cannot slam the next piece.
+  downLocked: boolean;
   // Line clear freeze: play stops for CLEAR_FRAMES while the completed
   // rows blank out, exactly as the NES pauses during its clear animation.
   clearCounter: number;
@@ -65,6 +79,10 @@ export function createGame(startLevel: number, seed: number = DEFAULT_SEED): Gam
     score: 0,
     lines: 0,
     gravityCounter: 0,
+    das: 0,
+    softCounter: 0,
+    pushdown: 0,
+    downLocked: true,
     clearCounter: 0,
     clearingRows: [],
     rng,
@@ -91,6 +109,9 @@ export function spawnPiece(g: Game): void {
   g.next = g.rng.nextPiece() as PieceId;
   g.piece = { id, rot: 0, x: SPAWN_X, y: SPAWN_Y };
   g.gravityCounter = 0;
+  g.softCounter = 0;
+  g.pushdown = 0;
+  g.downLocked = true; // Down must be released before it soft-drops this piece
   g.phase = 'falling';
   if (collides(g.board, id, 0, SPAWN_X, SPAWN_Y)) {
     // Top out: the piece locks where it spawned and the game ends.
@@ -128,6 +149,10 @@ function lock(g: Game): void {
   const p = g.piece!;
   g.piece = null;
 
+  // Pushdown points: rows of the final uninterrupted soft drop.
+  g.score = Math.min(MAX_SCORE, g.score + g.pushdown);
+  g.pushdown = 0;
+
   // Only rows touched by the piece can have completed.
   const rows = [...new Set(cellsOf(p.id, p.rot).map(([, dy]) => p.y + dy))];
   const full = rows
@@ -164,6 +189,54 @@ function finishClear(g: Game): void {
   spawnPiece(g);
 }
 
+// Held left/right under DAS rules. The NES checks Down first and skips
+// shifting entirely while it is held - you cannot shift and soft-drop
+// at the same time.
+function handleShift(g: Game, input: InputFrame): void {
+  if (input.downHeld) return;
+
+  if (input.leftPressed || input.rightPressed) {
+    g.das = 0;
+    tryMove(g, input.leftPressed ? -1 : 1, 0);
+    return;
+  }
+
+  const dir = input.leftHeld === input.rightHeld ? 0 : input.leftHeld ? -1 : 1;
+  if (dir === 0) return;
+
+  if (g.das < DAS_CHARGED) g.das++;
+  if (g.das >= DAS_CHARGED) {
+    if (tryMove(g, dir, 0)) g.das = DAS_RELOAD;
+    // else: the counter stays fully charged against the wall
+  }
+}
+
+function handleDrop(g: Game, input: InputFrame): void {
+  if (g.downLocked && !input.downHeld) g.downLocked = false;
+  const softDropping = input.downHeld && !g.downLocked;
+
+  if (softDropping) {
+    g.gravityCounter = 0; // soft drop preempts gravity
+    if (++g.softCounter >= SOFT_DROP_FRAMES) {
+      g.softCounter = 0;
+      if (tryMove(g, 0, 1)) g.pushdown++;
+      else lock(g);
+    }
+    return;
+  }
+
+  g.softCounter = 0;
+  g.pushdown = 0; // releasing Down forfeits accumulated pushdown points
+
+  // Gravity: the piece drops every gravityFrames(level) frames, and locks
+  // on the tick it fails to drop. There is no separate lock-delay timer.
+  g.gravityCounter++;
+  if (g.gravityCounter >= gravityFrames(g.level)) {
+    g.gravityCounter = 0;
+    if (!tryMove(g, 0, 1)) lock(g);
+  }
+}
+
 export function tick(g: Game, input: InputFrame): void {
   if (g.phase === 'gameover') return;
 
@@ -179,15 +252,6 @@ export function tick(g: Game, input: InputFrame): void {
   if (input.ccwPressed) tryRotate(g, rotateCcw(g.piece!.id, g.piece!.rot));
   if (input.cwPressed) tryRotate(g, rotateCw(g.piece!.id, g.piece!.rot));
 
-  // Horizontal taps. (Held-key auto-shift - DAS - comes with the input commit.)
-  if (input.leftPressed) tryMove(g, -1, 0);
-  else if (input.rightPressed) tryMove(g, 1, 0);
-
-  // Gravity: the piece drops every gravityFrames(level) frames, and locks
-  // on the tick it fails to drop. There is no separate lock-delay timer.
-  g.gravityCounter++;
-  if (g.gravityCounter >= gravityFrames(g.level)) {
-    g.gravityCounter = 0;
-    if (!tryMove(g, 0, 1)) lock(g);
-  }
+  handleShift(g, input);
+  handleDrop(g, input);
 }
