@@ -105,15 +105,15 @@ running. Within one `falling` tick, the order of operations is fixed:
 ```mermaid
 flowchart TD
   T["tick(game, input)"] --> P{paused or game over?}
-  P -- yes --> E[return]
+  P -- yes --> SKIP["nothing happens"]
   P -- no --> PH{phase?}
   PH -- clearing --> C["charge DAS, clearCounter -1"] --> CQ{reached 0?}
-  CQ -- yes --> FC["collapse rows, lines, level, score"] --> E
-  CQ -- no --> E
+  CQ -- yes --> FC["collapse rows, lines, level, score"]
+  CQ -- no --> CW["stay frozen"]
   PH -- are --> A["charge DAS, areCounter -1"] --> AQ{reached 0?}
-  AQ -- yes --> SP["spawnPiece (or top out)"] --> E
-  AQ -- no --> E
-  PH -- falling --> R["rotation edges (Z / X)"] --> S["handleShift (DAS)"] --> D["handleDrop (soft drop or gravity)"] --> E
+  AQ -- yes --> SP["spawnPiece (or top out)"]
+  AQ -- no --> AW["keep waiting"]
+  PH -- falling --> R["rotation edges (Z / X)"] --> S["handleShift (DAS)"] --> D["handleDrop (soft drop or gravity)"]
 ```
 
 ## Determinism
@@ -130,6 +130,23 @@ fire it at 120Hz). It accumulates real elapsed time and drains it in fixed
 steps of 1000 / 60.0988 ms. rAF draws; the accumulator decides how many
 frames actually happened. A step cap stops a backgrounded tab from
 fast-forwarding on return.
+
+```mermaid
+sequenceDiagram
+  participant rAF as Display (rAF, any Hz)
+  participant Shell as Shell accumulator
+  participant Kb as Keyboard
+  participant Core as core tick()
+  rAF->>Shell: frame callback
+  Shell->>Shell: acc += real elapsed time
+  loop while acc >= 16.639 ms (cap 8 steps)
+    Shell->>Kb: snapshot()
+    Kb-->>Shell: InputFrame (edges consumed)
+    Shell->>Core: tick(game, input)
+    Shell->>Shell: acc -= 16.639 ms
+  end
+  Shell->>rAF: draw current state
+```
 
 ## Principles deliberately refused
 
