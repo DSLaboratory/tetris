@@ -57,6 +57,8 @@ the deviation is recorded in [mechanics.md](mechanics.md), not hidden.
 ## A note on the name
 
 Tetris is a trademark of The Tetris Company, and its look-and-feel has been
-successfully litigated. This repository is a private study. It is not
-distributed publicly, and if it ever were, it would ship under a different
-name and presentation.
+successfully litigated. This repository is an educational engineering study
+of the published 1989 mechanics; it is not a product, is not distributed
+through any store, and is not affiliated with or endorsed by The Tetris
+Company. References to Tetris are descriptive: they name the game being
+studied.
