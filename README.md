@@ -21,9 +21,17 @@ counter-clockwise · **X** rotate clockwise · **Enter** start / pause.
 The same machine, rotated. Two standard wells back-to-back (each 10 across,
 20 deep in well space), rendered as pure rotations: the left well 90°
 clockwise, the right well 90° counter-clockwise. Pieces spawn at the seam
-in the middle and each is bound to a side by a raw LFSR coin flip — streaks
-are real, exactly like piece droughts. One piece at a time, one score, one
-level: either stack reaching the seam ends the whole game.
+in the middle; each is bound to a side by a fair LFSR coin flip **rolled at
+spawn and never announced** — the NEXT preview shows the piece in a neutral
+orientation with no direction, because guessing the front is part of the
+game. Streaks are real, exactly like piece droughts. One piece at a time,
+one score, one level: either stack reaching the seam ends the whole game.
+
+The side coin has its own LFSR register. Sharing one register with the
+piece picker was measurably biased (45.3/54.7 with 1.6× the fair rate of
+lopsided games) because the picker advances the register a conditional
+number of steps; a dedicated register emits the textbook m-sequence
+bitstream, balanced with coin-accurate runs.
 
 "Lines" are full 10-cell columns; on a clear, that half's stack slides
 outward toward its wall. Every NES mechanic (gravity table, DAS, ARE,
