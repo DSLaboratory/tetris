@@ -37,6 +37,19 @@ fails to fall. Between gravity ticks a resting piece still responds to
 shifts and rotations, which is why floor slides are possible at low levels
 and effectively vanish at high ones.
 
+```mermaid
+flowchart TD
+  G["gravityCounter + 1"] --> Q{"reached gravityFrames(level)?"}
+  Q -- no --> IDLE["piece still responds to input<br/>(floor slides live in this window)"]
+  Q -- yes --> RST["counter = 0"] --> TRY{can the piece move down?}
+  TRY -- yes --> DROP["y + 1"]
+  TRY -- no --> LOCK["LOCK into the well"]
+  LOCK --> FULL{completed rows?}
+  FULL -- yes --> CLR["clearing: 20 frame freeze"] --> ARE["ARE: 10 to 18 frames"]
+  FULL -- no --> ARE
+  ARE --> SPAWN["next piece spawns"]
+```
+
 ## DAS (delayed auto-shift)
 
 - A fresh press moves the piece one column immediately and zeroes the
@@ -49,6 +62,17 @@ and effectively vanish at high ones.
   direction carries its charge across spawns.
 - Horizontal input is ignored entirely while Down is held; you cannot
   shift and soft-drop at the same time.
+
+```mermaid
+flowchart TD
+  PRESS["fresh press"] --> MOVE["shift once immediately, das = 0"]
+  HOLD["key held this frame"] --> INC["das + 1 (capped at 16)"]
+  INC --> Q{"das at 16?"}
+  Q -- no --> WAIT["no shift this frame"]
+  Q -- yes --> TRY{"shift possible?"}
+  TRY -- yes --> SHIFT["shift, das = 10<br/>next repeat in 6 frames"]
+  TRY -- no --> CHARGED["stays at 16: WALL CHARGED<br/>fires the instant space opens,<br/>carries across spawns"]
+```
 
 ## Soft drop
 
@@ -67,6 +91,14 @@ and effectively vanish at high ones.
   previous piece, triggers exactly one reroll, accepted unconditionally.
 - Net effect: back-to-back repeats happen about 1 in 28 instead of 1 in 7,
   and droughts are real. This is not the modern 7-bag.
+
+```mermaid
+flowchart TD
+  ADV["advance LFSR"] --> ROLL["roll = (high byte + spawn count) mod 8"]
+  ROLL --> Q{"roll is 7, or equals<br/>the previous piece?"}
+  Q -- no --> OK["piece = roll"]
+  Q -- yes --> RE["advance LFSR again<br/>roll = high byte mod 7"] --> OK2["accept unconditionally<br/>(a repeat is still possible, ~1/28)"]
+```
 
 ## Line clears
 

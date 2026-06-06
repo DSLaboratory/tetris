@@ -31,6 +31,21 @@ and join the copies at the middle.
 - One score, one lines counter, one level, one fate: either stack reaching
   the seam ends the whole game.
 
+The life of every piece:
+
+```mermaid
+flowchart TD
+  ARE["ARE expires"] --> SPAWN["spawnPiece at the seam"]
+  SPAWN --> COIN{"side coin<br/>(dedicated LFSR, fair 50/50)"}
+  COIN -- 0 --> LEFT["bound to the LEFT well<br/>gravity pulls left"]
+  COIN -- 1 --> RIGHT["bound to the RIGHT well<br/>gravity pulls right"]
+  LEFT --> FREE{"spawn cells free?"}
+  RIGHT --> FREE
+  FREE -- yes --> FALL["falling: every classic mechanic<br/>applies in well space"]
+  FREE -- no --> OVER["GAME OVER: shared fate"]
+  FALL --> LOCKED["locks in its own well<br/>(it can never cross the seam)"]
+```
+
 ## Controls
 
 Absolute on screen, regardless of which side the piece is on:
@@ -41,6 +56,23 @@ Absolute on screen, regardless of which side the piece is on:
 - **Left / Right** soft-drop, but only the arrow pointing at the active
   piece's wall works; the opposite arrow is dead, like Up on the NES d-pad.
 - **Z / X** rotate counter-clockwise / clockwise, as always.
+
+How physical arrows become well-space input (the core only ever sees
+well-space left / right / down):
+
+```mermaid
+flowchart LR
+  UP["ArrowUp"] --> SIDE{"which well is the<br/>active piece bound to?"}
+  DOWN["ArrowDown"] --> SIDE
+  LK["ArrowLeft"] --> SIDE
+  RK["ArrowRight"] --> SIDE
+  SIDE -- left well --> L["Up = well-left<br/>Down = well-right<br/>Left = soft drop<br/>Right = dead"]
+  SIDE -- right well --> R["Up = well-right<br/>Down = well-left<br/>Right = soft drop<br/>Left = dead"]
+```
+
+The asymmetry exists because the wells are rotated opposite ways; mapping
+them this way is exactly what keeps Up meaning "up on screen" on both
+sides.
 
 ## Implementation notes
 

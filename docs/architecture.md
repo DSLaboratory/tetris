@@ -18,11 +18,38 @@ src/shell/   the browser around it
 test/        the executable specification (64 tests)
 ```
 
+The import graph enforces the one-way dependency: the shell imports the
+core, never the reverse, and the tests sit directly on the core.
+
+```mermaid
+flowchart LR
+  subgraph shell["src/shell (imperative shell)"]
+    main["main.ts<br/>fixed-timestep loop"]
+    input["input.ts<br/>keyboard adapter"]
+    render["render.ts<br/>canvas renderer"]
+  end
+  subgraph core["src/core (functional core)"]
+    game["game.ts<br/>state machine"]
+    pieces["pieces.ts<br/>NRS tables"]
+    rng["rng.ts<br/>LFSR"]
+    tables["tables.ts<br/>constants"]
+  end
+  tests["test/ (64 tests)"]
+  main --> input
+  main --> render
+  main --> game
+  input --> game
+  render --> game
+  game --> pieces
+  game --> rng
+  game --> tables
+  tests --> core
+```
+
 The core exports one verb: `tick(game, input)` advances the world exactly
 one NTSC frame. Time itself arrives as function calls; the core counts
-frames like the 6502 did. The dependency arrow points one way: the shell
-imports the core, never the reverse. This is why the tests need zero mocks
-and why horizontal mode never touched the rules.
+frames like the 6502 did. This is why the tests need zero mocks and why
+horizontal mode never touched the rules.
 
 ## State is plain data
 
@@ -58,14 +85,36 @@ data shape encodes the invariant, the code cannot violate it.
 
 ## The phase machine
 
-```
-falling --lock, no lines--> are(10-18 frames) --spawn--> falling
-falling --lock, lines--> clearing(20 frames) --> are --> falling
+```mermaid
+stateDiagram-v2
+  [*] --> falling : spawnPiece()
+  falling --> falling : gravity tick succeeds
+  falling --> are : lock, no lines
+  falling --> clearing : lock completes lines
+  clearing --> are : 20 frames, collapse + score
+  are --> falling : 10 to 18 frames, spawnPiece()
+  are --> gameover : spawn collides (top out)
+  gameover --> [*]
 ```
 
 Each delay is a counter decremented once per tick. `spawnPiece` is the only
 door back into `falling`; game over is `spawnPiece` finding its cells
-occupied.
+occupied. Pause is a flag, not a phase: it freezes whichever phase is
+running. Within one `falling` tick, the order of operations is fixed:
+
+```mermaid
+flowchart TD
+  T["tick(game, input)"] --> P{paused or game over?}
+  P -- yes --> E[return]
+  P -- no --> PH{phase?}
+  PH -- clearing --> C["charge DAS, clearCounter -1"] --> CQ{reached 0?}
+  CQ -- yes --> FC["collapse rows, lines, level, score"] --> E
+  CQ -- no --> E
+  PH -- are --> A["charge DAS, areCounter -1"] --> AQ{reached 0?}
+  AQ -- yes --> SP["spawnPiece (or top out)"] --> E
+  AQ -- no --> E
+  PH -- falling --> R["rotation edges (Z / X)"] --> S["handleShift (DAS)"] --> D["handleDrop (soft drop or gravity)"] --> E
+```
 
 ## Determinism
 

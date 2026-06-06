@@ -43,6 +43,14 @@ Two layers, by design:
   charging, floor slides, the lock-pause-spawn rhythm. No test can sign
   these off; playing is part of the verification, not a demo.
 
+```mermaid
+flowchart LR
+  CLAIM["claim: faithful to<br/>the 1989 NES ruleset"] --> SUITE["test suite asserts<br/>every published number"]
+  CLAIM --> HUMAN["human play asserts<br/>the feel"]
+  SUITE --> OK["verified, or a test fails"]
+  HUMAN --> OK
+```
+
 Where the implementation knowingly deviates from cycle-exact NES behaviour,
 the deviation is recorded in [mechanics.md](mechanics.md), not hidden.
 
