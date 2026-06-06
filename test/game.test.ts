@@ -89,6 +89,8 @@ describe('locking', () => {
     g.piece = { id: 3, rot: 0, x: 5, y: 18 }; // O plugs the gap at 4,5
     g.gravityCounter = 47;
     tick(g, IDLE); // lock -> row 19 completes
+    expect(g.phase).toBe('clearing');
+    tickN(g, 20); // the clear freeze runs its 20 frames
     // Row 19 cleared; row 18 (marker + O top half) shifted down into it.
     expect(g.board[19 * WIDTH + 0]).toBe(2);
     expect(g.board[19 * WIDTH + 4]).toBe(4);

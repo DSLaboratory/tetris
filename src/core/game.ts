@@ -3,7 +3,9 @@
 import {
   PieceId, cellsOf, rotateCw, rotateCcw, SPAWN_X, SPAWN_Y,
 } from './pieces';
-import { gravityFrames } from './tables';
+import {
+  gravityFrames, scoreForLines, levelForLines, MAX_SCORE, CLEAR_FRAMES,
+} from './tables';
 import { Rng, DEFAULT_SEED } from './rng';
 
 export const WIDTH = 10;
@@ -22,7 +24,7 @@ export interface InputFrame {
   startPressed: boolean;
 }
 
-export type Phase = 'falling' | 'gameover';
+export type Phase = 'falling' | 'clearing' | 'gameover';
 
 export interface ActivePiece {
   id: PieceId;
@@ -40,7 +42,13 @@ export interface Game {
   paused: boolean;
   startLevel: number;
   level: number;
+  score: number;
+  lines: number;
   gravityCounter: number;
+  // Line clear freeze: play stops for CLEAR_FRAMES while the completed
+  // rows blank out, exactly as the NES pauses during its clear animation.
+  clearCounter: number;
+  clearingRows: number[];
   rng: Rng;
 }
 
@@ -54,7 +62,11 @@ export function createGame(startLevel: number, seed: number = DEFAULT_SEED): Gam
     paused: false,
     startLevel,
     level: startLevel,
+    score: 0,
+    lines: 0,
     gravityCounter: 0,
+    clearCounter: 0,
+    clearingRows: [],
     rng,
   };
   spawnPiece(game);
@@ -79,6 +91,7 @@ export function spawnPiece(g: Game): void {
   g.next = g.rng.nextPiece() as PieceId;
   g.piece = { id, rot: 0, x: SPAWN_X, y: SPAWN_Y };
   g.gravityCounter = 0;
+  g.phase = 'falling';
   if (collides(g.board, id, 0, SPAWN_X, SPAWN_Y)) {
     // Top out: the piece locks where it spawned and the game ends.
     writePiece(g);
@@ -125,10 +138,28 @@ function lock(g: Game): void {
     })
     .sort((a, b) => a - b);
 
-  for (const r of full) {
+  if (full.length > 0) {
+    g.phase = 'clearing';
+    g.clearCounter = CLEAR_FRAMES;
+    g.clearingRows = full;
+  } else {
+    spawnPiece(g);
+  }
+}
+
+function finishClear(g: Game): void {
+  for (const r of g.clearingRows) {
     g.board.copyWithin(WIDTH, 0, r * WIDTH); // shift everything above down a row
     g.board.fill(0, 0, WIDTH);
   }
+  const cleared = g.clearingRows.length;
+  g.clearingRows = [];
+
+  g.lines += cleared;
+  // The NES levels up first and THEN scores, so points for a level-up
+  // clear are multiplied by the NEW level + 1.
+  g.level = Math.max(g.level, levelForLines(g.startLevel, g.lines));
+  g.score = Math.min(MAX_SCORE, g.score + scoreForLines(cleared) * (g.level + 1));
 
   spawnPiece(g);
 }
@@ -138,6 +169,11 @@ export function tick(g: Game, input: InputFrame): void {
 
   if (input.startPressed) g.paused = !g.paused;
   if (g.paused) return;
+
+  if (g.phase === 'clearing') {
+    if (--g.clearCounter <= 0) finishClear(g);
+    return;
+  }
 
   // Rotation: edge-triggered, one step per press, no auto-repeat.
   if (input.ccwPressed) tryRotate(g, rotateCcw(g.piece!.id, g.piece!.rot));
