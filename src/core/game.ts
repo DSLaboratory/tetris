@@ -1,4 +1,9 @@
 // The core game machine. Pure logic, no DOM: one tick = one NTSC frame.
+//
+// The machine is well-count agnostic. Classic Tetris is one well; horizontal
+// Tetris is two wells back-to-back with the spawn seam in the middle. A well
+// is always 10 across and 20 deep IN WELL SPACE - which way "down" points on
+// screen is entirely the renderer's business. The rules never change.
 
 import {
   PieceId, cellsOf, rotateCw, rotateCcw, SPAWN_X, SPAWN_Y,
@@ -13,7 +18,8 @@ export const WIDTH = 10;
 export const HEIGHT = 20;
 
 // One frame of input, as the NES sees it: edges (pressed this frame)
-// and levels (currently held).
+// and levels (currently held). Directions are WELL-SPACE: left/right are
+// lateral, down is toward the floor. The shell maps physical keys here.
 export interface InputFrame {
   leftPressed: boolean;
   rightPressed: boolean;
@@ -35,8 +41,12 @@ export interface ActivePiece {
 }
 
 export interface Game {
-  // Row-major 10x20; 0 = empty, otherwise pieceId + 1.
-  board: Uint8Array;
+  // Each well is row-major 10x20; 0 = empty, otherwise pieceId + 1.
+  wells: Uint8Array[];
+  // Which well the active piece is falling in, and where the NEXT piece
+  // will spawn (rolled alongside the piece so the preview can show it).
+  well: number;
+  nextWell: number;
   piece: ActivePiece | null;
   next: PieceId;
   phase: Phase;
@@ -69,10 +79,12 @@ export interface Game {
   rng: Rng;
 }
 
-export function createGame(startLevel: number, seed: number = DEFAULT_SEED): Game {
+export function createGame(startLevel: number, seed: number = DEFAULT_SEED, wellCount = 1): Game {
   const rng = new Rng(seed);
   const game: Game = {
-    board: new Uint8Array(WIDTH * HEIGHT),
+    wells: Array.from({ length: wellCount }, () => new Uint8Array(WIDTH * HEIGHT)),
+    well: 0,
+    nextWell: 0,
     piece: null,
     next: rng.nextPiece() as PieceId,
     phase: 'falling',
@@ -91,8 +103,16 @@ export function createGame(startLevel: number, seed: number = DEFAULT_SEED): Gam
     areCounter: 0,
     rng,
   };
+  game.nextWell = rollWell(game);
   spawnPiece(game);
   return game;
+}
+
+// With more than one well, each piece is randomly bound to one of them:
+// a raw LFSR coin flip, rolled with the piece. Streaks are part of the
+// game, exactly like piece droughts.
+function rollWell(g: Game): number {
+  return g.wells.length > 1 ? g.rng.nextBit() : 0;
 }
 
 // A position collides if any cell is outside the well or on the stack.
@@ -110,15 +130,19 @@ export function collides(board: Uint8Array, id: PieceId, rot: number, x: number,
 
 export function spawnPiece(g: Game): void {
   const id = g.next;
+  g.well = g.nextWell;
   g.next = g.rng.nextPiece() as PieceId;
+  g.nextWell = rollWell(g);
   g.piece = { id, rot: 0, x: SPAWN_X, y: SPAWN_Y };
   g.gravityCounter = 0;
   g.softCounter = 0;
   g.pushdown = 0;
   g.downLocked = true; // Down must be released before it soft-drops this piece
   g.phase = 'falling';
-  if (collides(g.board, id, 0, SPAWN_X, SPAWN_Y)) {
+  if (collides(g.wells[g.well], id, 0, SPAWN_X, SPAWN_Y)) {
     // Top out: the piece locks where it spawned and the game ends.
+    // With two wells this is the shared fate: either stack reaching
+    // its spawn seam kills the whole game.
     writePiece(g);
     g.phase = 'gameover';
   }
@@ -126,16 +150,17 @@ export function spawnPiece(g: Game): void {
 
 function writePiece(g: Game): void {
   const p = g.piece!;
+  const board = g.wells[g.well];
   for (const [dx, dy] of cellsOf(p.id, p.rot)) {
     const cy = p.y + dy;
     const cx = p.x + dx;
-    if (cy >= 0 && cy < HEIGHT) g.board[cy * WIDTH + cx] = p.id + 1;
+    if (cy >= 0 && cy < HEIGHT) board[cy * WIDTH + cx] = p.id + 1;
   }
 }
 
 function tryMove(g: Game, dx: number, dy: number): boolean {
   const p = g.piece!;
-  if (collides(g.board, p.id, p.rot, p.x + dx, p.y + dy)) return false;
+  if (collides(g.wells[g.well], p.id, p.rot, p.x + dx, p.y + dy)) return false;
   p.x += dx;
   p.y += dy;
   return true;
@@ -143,7 +168,7 @@ function tryMove(g: Game, dx: number, dy: number): boolean {
 
 function tryRotate(g: Game, rot: number): boolean {
   const p = g.piece!;
-  if (collides(g.board, p.id, rot, p.x, p.y)) return false; // no kicks: it just fails
+  if (collides(g.wells[g.well], p.id, rot, p.x, p.y)) return false; // no kicks: it just fails
   p.rot = rot;
   return true;
 }
@@ -151,6 +176,7 @@ function tryRotate(g: Game, rot: number): boolean {
 function lock(g: Game): void {
   writePiece(g);
   const p = g.piece!;
+  const board = g.wells[g.well];
   g.piece = null;
 
   // Pushdown points: rows of the final uninterrupted soft drop.
@@ -162,7 +188,7 @@ function lock(g: Game): void {
   const full = rows
     .filter((r) => r >= 0 && r < HEIGHT)
     .filter((r) => {
-      for (let x = 0; x < WIDTH; x++) if (!g.board[r * WIDTH + x]) return false;
+      for (let x = 0; x < WIDTH; x++) if (!board[r * WIDTH + x]) return false;
       return true;
     })
     .sort((a, b) => a - b);
@@ -181,9 +207,12 @@ function lock(g: Game): void {
 }
 
 function finishClear(g: Game): void {
+  // g.well still points at the well the piece locked in; the next piece's
+  // well is only adopted at spawn time.
+  const board = g.wells[g.well];
   for (const r of g.clearingRows) {
-    g.board.copyWithin(WIDTH, 0, r * WIDTH); // shift everything above down a row
-    g.board.fill(0, 0, WIDTH);
+    board.copyWithin(WIDTH, 0, r * WIDTH); // shift everything above down a row
+    board.fill(0, 0, WIDTH);
   }
   const cleared = g.clearingRows.length;
   g.clearingRows = [];

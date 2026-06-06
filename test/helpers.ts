@@ -23,6 +23,6 @@ export function tickN(g: Game, n: number, input: InputFrame = IDLE): void {
 // Fill a board row, optionally leaving gaps at the given columns.
 export function fillRow(g: Game, row: number, except: number[] = []): void {
   for (let x = 0; x < 10; x++) {
-    if (!except.includes(x)) g.board[row * 10 + x] = 1;
+    if (!except.includes(x)) g.wells[0][row * 10 + x] = 1;
   }
 }

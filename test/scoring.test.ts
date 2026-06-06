@@ -82,7 +82,7 @@ describe('scoring through play', () => {
     tickN(g, CLEAR_FRAMES);
     expect(g.lines).toBe(4);
     expect(g.score).toBe(1200);
-    expect(Array.from(g.board).every((c) => c === 0)).toBe(true); // board fully empty
+    expect(Array.from(g.wells[0]).every((c) => c === 0)).toBe(true); // board fully empty
   });
 
   it('play is frozen for exactly the 20 clear frames', () => {
@@ -95,7 +95,7 @@ describe('scoring through play', () => {
     expect(g.phase).toBe('clearing'); // still frozen on frame 19
     tick(g, IDLE);
     expect(g.phase).not.toBe('clearing'); // frame 20 ends the freeze
-    expect(g.board[19 * WIDTH + 0]).toBe(0); // cleared row gone...
-    expect(g.board[19 * WIDTH + 4]).toBe(4); // ...and the O's top half collapsed into it
+    expect(g.wells[0][19 * WIDTH + 0]).toBe(0); // cleared row gone...
+    expect(g.wells[0][19 * WIDTH + 4]).toBe(4); // ...and the O's top half collapsed into it
   });
 });

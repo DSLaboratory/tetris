@@ -36,6 +36,13 @@ export class Rng {
     this.spawnCount = 0;
   }
 
+  // A raw coin flip off the LFSR, used for spawn-side assignment in
+  // multi-well modes. Deliberately unfair over short runs.
+  nextBit(): number {
+    this.state = lfsrNext(this.state);
+    return (this.state >> 8) & 1;
+  }
+
   nextPiece(): number {
     this.spawnCount = (this.spawnCount + 1) & 0xff;
     this.state = lfsrNext(this.state);

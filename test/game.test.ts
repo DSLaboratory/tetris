@@ -69,7 +69,7 @@ describe('locking', () => {
     tickN(g, 47);
     expect(g.piece).toMatchObject({ x: 5, y: 18 }); // still live
     tick(g, IDLE); // 48th frame: gravity fails -> lock
-    expect(g.board[19 * WIDTH + 5]).toBe(4); // O id 3 -> stored as 4
+    expect(g.wells[0][19 * WIDTH + 5]).toBe(4); // O id 3 -> stored as 4
     expect(g.phase).toBe('are'); // entry delay before the next piece
     tickN(g, 10); // ARE for a bottom-row lock is 10 frames
     expect(g.piece).toMatchObject({ x: 5, y: 0 }); // next piece spawned
@@ -87,24 +87,24 @@ describe('locking', () => {
   it('clears a completed row and collapses the stack', () => {
     const g = createGame(0);
     fillRow(g, 19, [4, 5]);
-    g.board[18 * WIDTH + 0] = 2; // marker sitting on row 18
+    g.wells[0][18 * WIDTH + 0] = 2; // marker sitting on row 18
     g.piece = { id: 3, rot: 0, x: 5, y: 18 }; // O plugs the gap at 4,5
     g.gravityCounter = 47;
     tick(g, IDLE); // lock -> row 19 completes
     expect(g.phase).toBe('clearing');
     tickN(g, 20); // the clear freeze runs its 20 frames
     // Row 19 cleared; row 18 (marker + O top half) shifted down into it.
-    expect(g.board[19 * WIDTH + 0]).toBe(2);
-    expect(g.board[19 * WIDTH + 4]).toBe(4);
-    expect(g.board[19 * WIDTH + 5]).toBe(4);
-    expect(Array.from(g.board.slice(0, 19 * WIDTH)).every((c) => c === 0)).toBe(true);
+    expect(g.wells[0][19 * WIDTH + 0]).toBe(2);
+    expect(g.wells[0][19 * WIDTH + 4]).toBe(4);
+    expect(g.wells[0][19 * WIDTH + 5]).toBe(4);
+    expect(Array.from(g.wells[0].slice(0, 19 * WIDTH)).every((c) => c === 0)).toBe(true);
   });
 });
 
 describe('top out', () => {
   it('game over when the spawned piece collides', () => {
     const g = createGame(0);
-    g.board[1 * WIDTH + 5] = 1; // T spawn occupies (5,1)
+    g.wells[0][1 * WIDTH + 5] = 1; // T spawn occupies (5,1)
     g.next = 0; // force a T
     spawnPiece(g);
     expect(g.phase).toBe('gameover');
@@ -112,12 +112,12 @@ describe('top out', () => {
 
   it('ticking after game over changes nothing', () => {
     const g = createGame(0);
-    g.board[1 * WIDTH + 5] = 1;
+    g.wells[0][1 * WIDTH + 5] = 1;
     g.next = 0;
     spawnPiece(g);
-    const snapshot = Array.from(g.board);
+    const snapshot = Array.from(g.wells[0]);
     tickN(g, 10, mkInput({ leftPressed: true, leftHeld: true }));
-    expect(Array.from(g.board)).toEqual(snapshot);
+    expect(Array.from(g.wells[0])).toEqual(snapshot);
   });
 });
 

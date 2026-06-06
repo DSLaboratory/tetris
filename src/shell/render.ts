@@ -53,7 +53,7 @@ function drawBoard(ctx: CanvasRenderingContext2D, g: Game): void {
   }
   for (let y = 0; y < HEIGHT; y++) {
     for (let x = 0; x < WIDTH; x++) {
-      const v = g.board[y * WIDTH + x];
+      const v = g.wells[0][y * WIDTH + x];
       if (!v) continue;
       if (g.phase === 'clearing' && g.clearingRows.includes(y) && blanked.has(x)) continue;
       boardCell(ctx, x, y, COLORS[v - 1]);
