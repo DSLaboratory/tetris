@@ -43,10 +43,11 @@ export interface ActivePiece {
 export interface Game {
   // Each well is row-major 10x20; 0 = empty, otherwise pieceId + 1.
   wells: Uint8Array[];
-  // Which well the active piece is falling in, and where the NEXT piece
-  // will spawn (rolled alongside the piece so the preview can show it).
+  // Which well the active piece is falling in. The side is rolled AT
+  // SPAWN, not before: the preview deliberately carries no direction
+  // information - not knowing which front the next piece will fight on
+  // is part of the game.
   well: number;
-  nextWell: number;
   piece: ActivePiece | null;
   next: PieceId;
   phase: Phase;
@@ -84,7 +85,6 @@ export function createGame(startLevel: number, seed: number = DEFAULT_SEED, well
   const game: Game = {
     wells: Array.from({ length: wellCount }, () => new Uint8Array(WIDTH * HEIGHT)),
     well: 0,
-    nextWell: 0,
     piece: null,
     next: rng.nextPiece() as PieceId,
     phase: 'falling',
@@ -103,7 +103,6 @@ export function createGame(startLevel: number, seed: number = DEFAULT_SEED, well
     areCounter: 0,
     rng,
   };
-  game.nextWell = rollWell(game);
   spawnPiece(game);
   return game;
 }
@@ -130,9 +129,8 @@ export function collides(board: Uint8Array, id: PieceId, rot: number, x: number,
 
 export function spawnPiece(g: Game): void {
   const id = g.next;
-  g.well = g.nextWell;
+  g.well = rollWell(g); // the side is decided here, at spawn, never earlier
   g.next = g.rng.nextPiece() as PieceId;
-  g.nextWell = rollWell(g);
   g.piece = { id, rot: 0, x: SPAWN_X, y: SPAWN_Y };
   g.gravityCounter = 0;
   g.softCounter = 0;

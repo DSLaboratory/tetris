@@ -183,27 +183,18 @@ function drawHorizontalHud(ctx: CanvasRenderingContext2D, g: Game): void {
   text(ctx, 'LEVEL', BOARD_X + 320, y, 14, DIM);
   text(ctx, String(g.level).padStart(2, '0'), BOARD_X + 320, y + 26, 22);
 
-  // Next preview: the piece as it will appear at spawn, plus its direction.
+  // Next preview: the piece only, drawn in a NEUTRAL orientation. Its side
+  // is rolled at spawn and deliberately not shown - guessing the front is
+  // part of the game.
   const boxX = BOARD_X + 460;
   const boxY = y - 14;
-  const boxCols = 5;
-  const boxRows = 4;
   text(ctx, 'NEXT', boxX, y, 14, DIM);
   ctx.strokeStyle = BORDER;
   ctx.lineWidth = 2;
-  ctx.strokeRect(boxX + 60, boxY, boxCols * H_CELL, boxRows * H_CELL);
-  const cells = cellsOf(g.next, 0).map(([dx, dy]) =>
-    g.nextWell === 0 ? [-dy, dx] : [dy, -dx]);
-  const minC = Math.min(...cells.map(([c]) => c));
-  const maxC = Math.max(...cells.map(([c]) => c));
-  const minR = Math.min(...cells.map(([, r]) => r));
-  const maxR = Math.max(...cells.map(([, r]) => r));
-  const offC = (boxCols - (maxC - minC + 1)) / 2 - minC;
-  const offR = (boxRows - (maxR - minR + 1)) / 2 - minR;
-  for (const [c, r] of cells) {
-    cell(ctx, boxX + 60 + (c + offC) * H_CELL, boxY + (r + offR) * H_CELL, H_CELL, COLORS[g.next]);
+  ctx.strokeRect(boxX + 60, boxY, 5 * H_CELL, 4 * H_CELL);
+  for (const [dx, dy] of cellsOf(g.next, 0)) {
+    cell(ctx, boxX + 60 + (dx + 2) * H_CELL + H_CELL / 2, boxY + (dy + 1) * H_CELL + H_CELL / 2, H_CELL, COLORS[g.next]);
   }
-  text(ctx, g.nextWell === 0 ? '←' : '→', boxX + 60 + boxCols * H_CELL + 16, boxY + boxRows * H_CELL / 2 + 8, 26);
 }
 
 export function renderHorizontal(ctx: CanvasRenderingContext2D, g: Game): void {
