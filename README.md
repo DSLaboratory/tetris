@@ -13,8 +13,27 @@ npm run dev      # then open the printed localhost URL
 npm test         # the mechanics test suite
 ```
 
-Controls: **← →** move · **↓** soft drop · **Z** rotate counter-clockwise ·
-**X** rotate clockwise · **Enter** start / pause.
+Classic controls: **← →** move · **↓** soft drop · **Z** rotate
+counter-clockwise · **X** rotate clockwise · **Enter** start / pause.
+
+## Horizontal mode
+
+The same machine, rotated. Two standard wells back-to-back (each 10 across,
+20 deep in well space), rendered as pure rotations: the left well 90°
+clockwise, the right well 90° counter-clockwise. Pieces spawn at the seam
+in the middle and each is bound to a side by a raw LFSR coin flip — streaks
+are real, exactly like piece droughts. One piece at a time, one score, one
+level: either stack reaching the seam ends the whole game.
+
+"Lines" are full 10-cell columns; on a clear, that half's stack slides
+outward toward its wall. Every NES mechanic (gravity table, DAS, ARE,
+NRS, gravity-tick locking, scoring) applies unchanged in well space —
+the core never knows which way is down on screen.
+
+Horizontal controls: **↑ ↓** move (this is the lateral pair, with DAS) ·
+**← →** soft drop, but only the arrow pointing at the active piece's wall
+works; the other is dead · **Z X** rotate as always. The NEXT preview shows
+the coming piece with its direction arrow.
 
 ## The mechanics, with their numbers
 
