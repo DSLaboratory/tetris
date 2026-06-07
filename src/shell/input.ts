@@ -61,6 +61,19 @@ export class Keyboard {
   }
 }
 
+// Combine two input sources (keyboard + gamepad) into one RawInput for the
+// frame. held flags and pressed edges OR together, so either device works and
+// neither shadows the other (a released gamepad button is just false).
+export function mergeRaw(a: RawInput, b: RawInput): RawInput {
+  const held = emptyState();
+  const pressed = emptyState();
+  for (const btn of BUTTONS) {
+    held[btn] = a.held[btn] || b.held[btn];
+    pressed[btn] = a.pressed[btn] || b.pressed[btn];
+  }
+  return { held, pressed };
+}
+
 // Classic: the identity mapping. Up does nothing, like the NES d-pad.
 export function classicFrame(raw: RawInput): InputFrame {
   return {
