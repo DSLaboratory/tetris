@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createGame, spawnPiece, tick, WIDTH } from '../src/core/game';
+import { createGame, spawnPiece, tick, collides, WIDTH } from '../src/core/game';
 import { mkInput, IDLE, tickN, fillRow } from './helpers';
 
 describe('spawning', () => {
@@ -50,14 +50,27 @@ describe('rotation (NRS: no wall kicks)', () => {
     expect(g.piece!.rot).toBe(1);
   });
 
-  it('the I piece cannot go vertical while at the ceiling', () => {
+  it('pieces can rotate at spawn — the top 2 rows are a hidden buffer (NES)', () => {
+    // The vertical I needs rows -2..-1 above the field; the NES allows that
+    // (hidden buffer), so rotating at the spawn row succeeds immediately.
+    const i = createGame(0);
+    i.piece = { id: 6, rot: 0, x: 5, y: 0 };
+    tick(i, mkInput({ cwPressed: true }));
+    expect(i.piece!.rot).toBe(1); // I goes vertical at the very top
+
+    // A normal piece (T) also rotates immediately at spawn (its top cell
+    // pokes into the hidden buffer).
+    const t = createGame(0);
+    t.piece = { id: 0, rot: 0, x: 5, y: 0 };
+    tick(t, mkInput({ cwPressed: true }));
+    expect(t.piece!.rot).toBe(1);
+  });
+
+  it('rotation is still blocked above the 2-row hidden buffer', () => {
+    // A vertical I whose top cell would land at row -3 (one above the buffer)
+    // is rejected. dy -2 + y -1 = row -3.
     const g = createGame(0);
-    g.piece = { id: 6, rot: 0, x: 5, y: 0 }; // vertical I would need y -2, -1
-    tick(g, mkInput({ cwPressed: true }));
-    expect(g.piece!.rot).toBe(0);
-    g.piece.y = 2; // two rows down it fits
-    tick(g, mkInput({ cwPressed: true }));
-    expect(g.piece!.rot).toBe(1);
+    expect(collides(g.wells[0], 6, 1, 5, -1)).toBe(true);
   });
 });
 

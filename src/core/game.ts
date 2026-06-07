@@ -114,15 +114,22 @@ function rollWell(g: Game): number {
   return g.wells.length > 1 ? g.rng.nextBit() : 0;
 }
 
-// A position collides if any cell is outside the well or on the stack.
-// Cells above the top (y < 0) count as collisions: vertical rotations are
-// simply not possible until the piece has fallen clear of the ceiling.
+// The NES playfield is effectively 22 rows with the top 2 HIDDEN: the bounds
+// check only rejects below the floor (cy >= HEIGHT) and above the hidden buffer
+// (cy < -BUFFER_ROWS) — there is no "row 0 is the ceiling" rule. That hidden
+// buffer is what lets you rotate a piece the instant it spawns: a rotated cell
+// pokes up to row -1 (or -2 for the vertical I) into the buffer, which is legal
+// (the renderer just doesn't draw cells above row 0). The stack only occupies
+// rows 0..19, so occupancy is checked only there.
+export const BUFFER_ROWS = 2;
 export function collides(board: Uint8Array, id: PieceId, rot: number, x: number, y: number): boolean {
   for (const [dx, dy] of cellsOf(id, rot)) {
     const cx = x + dx;
     const cy = y + dy;
-    if (cx < 0 || cx >= WIDTH || cy < 0 || cy >= HEIGHT) return true;
-    if (board[cy * WIDTH + cx]) return true;
+    if (cx < 0 || cx >= WIDTH) return true;        // side walls
+    if (cy >= HEIGHT) return true;                 // floor
+    if (cy < -BUFFER_ROWS) return true;            // above the hidden buffer
+    if (cy >= 0 && board[cy * WIDTH + cx]) return true; // the stack (rows 0..19)
   }
   return false;
 }
