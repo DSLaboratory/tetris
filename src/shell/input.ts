@@ -10,7 +10,9 @@ import { InputFrame } from '../core/game';
 
 export type Button = 'up' | 'down' | 'left' | 'right' | 'cw' | 'ccw' | 'start';
 
-const KEYMAP: Record<string, Button> = {
+// Player 1: arrows + Z/X + Enter. Player 2 (versus): a left-hand cluster, so two
+// people can share one keyboard while testing without two pads.
+export const KEYMAP_P1: Record<string, Button> = {
   ArrowUp: 'up',
   ArrowLeft: 'left',
   ArrowRight: 'right',
@@ -20,6 +22,15 @@ const KEYMAP: Record<string, Button> = {
   z: 'ccw',
   Z: 'ccw',
   Enter: 'start',
+};
+export const KEYMAP_P2: Record<string, Button> = {
+  w: 'up', W: 'up',
+  a: 'left', A: 'left',
+  d: 'right', D: 'right',
+  s: 'down', S: 'down',
+  q: 'ccw', Q: 'ccw',
+  e: 'cw', E: 'cw',
+  // start (pause) stays a P1 / pad concern in versus; P2 needs no start key.
 };
 
 export interface RawInput {
@@ -37,9 +48,9 @@ export class Keyboard {
   private held = emptyState();
   private pressed = emptyState();
 
-  constructor() {
+  constructor(private keymap: Record<string, Button> = KEYMAP_P1) {
     window.addEventListener('keydown', (e) => {
-      const button = KEYMAP[e.key];
+      const button = this.keymap[e.key];
       if (!button) return;
       e.preventDefault();
       if (e.repeat) return; // fresh presses only; DAS does the repeating
@@ -47,7 +58,7 @@ export class Keyboard {
       this.pressed[button] = true;
     });
     window.addEventListener('keyup', (e) => {
-      const button = KEYMAP[e.key];
+      const button = this.keymap[e.key];
       if (!button) return;
       this.held[button] = false;
     });

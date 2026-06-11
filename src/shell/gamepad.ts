@@ -36,6 +36,56 @@ function emptyState(): Record<Button, boolean> {
   return { up: false, down: false, left: false, right: false, cw: false, ccw: false, start: false };
 }
 
+/* --------------------------- per-pad remapping --------------------------- */
+// A bound physical input: a button index, or an axis past the threshold in a
+// direction. Bindings are stored per pad id, so every controller remembers its
+// own mapping and the two players stay independent automatically. When a pad has
+// no saved binding it falls back to the 8BitDo SN30 defaults below.
+
+export type Bind = { kind: 'button'; index: number } | { kind: 'axis'; index: number; dir: 1 | -1 };
+export type Binding = Partial<Record<Button, Bind>>;
+export type RawPad = { buttons: boolean[]; axes: number[] };
+
+// The order the config flow asks the player to bind, and the labels it shows.
+// Top-down d-pad first (Up, Down, Left, Right), then the action buttons.
+export const BIND_ORDER: Button[] = ['up', 'down', 'left', 'right', 'ccw', 'cw', 'start'];
+export const BIND_LABELS: Record<Button, string> = {
+  up: 'Up', down: 'Down (soft drop)', left: 'Left', right: 'Right',
+  cw: 'Rotate CW', ccw: 'Rotate CCW', start: 'Start / Pause',
+};
+
+// The newly-activated input vs a neutral baseline: a button that went down, or an
+// axis that left centre. The config flow captures one press per action with this.
+export function detectBind(rest: RawPad, now: RawPad): Bind | null {
+  for (let i = 0; i < now.buttons.length; i++) {
+    if (now.buttons[i] && !rest.buttons[i]) return { kind: 'button', index: i };
+  }
+  for (let i = 0; i < now.axes.length; i++) {
+    if (Math.abs(rest.axes[i] ?? 0) >= DPAD_AXIS_THRESHOLD) continue; // already pushed at baseline
+    const v = now.axes[i] ?? 0;
+    if (v > DPAD_AXIS_THRESHOLD) return { kind: 'axis', index: i, dir: 1 };
+    if (v < -DPAD_AXIS_THRESHOLD) return { kind: 'axis', index: i, dir: -1 };
+  }
+  return null;
+}
+
+export function padReleased(s: RawPad): boolean {
+  return s.buttons.every((b) => !b) && s.axes.every((a) => Math.abs(a) < DPAD_AXIS_THRESHOLD);
+}
+
+export function bindLabel(b: Bind): string {
+  return b.kind === 'button' ? `button ${b.index}` : `axis ${b.index}${b.dir > 0 ? '+' : '-'}`;
+}
+
+const bindKey = (padId: string): string => `tetris.pad.${padId}`;
+export function saveBinding(padId: string, binding: Binding): void {
+  try { localStorage.setItem(bindKey(padId), JSON.stringify(binding)); } catch { /* ignore */ }
+}
+function loadBinding(padId: string): Binding | null {
+  try { const raw = localStorage.getItem(bindKey(padId)); return raw ? (JSON.parse(raw) as Binding) : null; }
+  catch { return null; }
+}
+
 export interface GamepadInfo {
   id: string;
   mapping: string;
@@ -46,9 +96,13 @@ export interface GamepadInfo {
 export class GamepadInput {
   private prevHeld = emptyState();
   private getPads: () => (Gamepad | null)[];
+  private playerIndex: number; // 0 = first connected pad, 1 = second (two-player)
   connectedId: string | null = null;
+  private binding: Binding | null = null; // this pad's saved remap, or null = SN30 defaults
+  private bindingId: string | null = null;
 
-  constructor(opts: { target?: Window; getPads?: () => (Gamepad | null)[] } = {}) {
+  constructor(opts: { target?: Window; getPads?: () => (Gamepad | null)[]; playerIndex?: number } = {}) {
+    this.playerIndex = opts.playerIndex ?? 0;
     this.getPads = opts.getPads
       ?? (() => (typeof navigator !== 'undefined' && navigator.getGamepads ? navigator.getGamepads() : []));
     const target = opts.target ?? (typeof window !== 'undefined' ? window : undefined);
@@ -70,7 +124,13 @@ export class GamepadInput {
   }
 
   private active(): Gamepad | null {
-    for (const p of this.getPads()) if (p && p.connected) return p;
+    let n = 0;
+    for (const p of this.getPads()) {
+      if (p && p.connected) {
+        if (n === this.playerIndex) return p;
+        n++;
+      }
+    }
     return null;
   }
 
@@ -88,42 +148,60 @@ export class GamepadInput {
     };
   }
 
-  // Same { held, pressed } shape the Keyboard produces. pressed is the rising
-  // edge versus the previous snapshot; held is the live state.
+  // The raw pad state (every button + axis), for the config flow's press detection.
+  rawState(): RawPad | null {
+    const pad = this.active();
+    if (!pad) return null;
+    return { buttons: pad.buttons.map((b) => b.pressed), axes: pad.axes.map((a) => a) };
+  }
+  activePadId(): string | null { return this.active()?.id ?? null; }
+  // Drop the cached binding so the next snapshot reloads it (after a config save).
+  reloadBinding(): void { this.bindingId = null; }
+
+  private syncBinding(pad: Gamepad): void {
+    if (pad.id === this.bindingId) return;
+    this.bindingId = pad.id;
+    this.binding = loadBinding(pad.id);
+  }
+  private readBind(pad: Gamepad, b: Bind | undefined): boolean {
+    if (!b) return false;
+    if (b.kind === 'button') return pad.buttons[b.index]?.pressed ?? false;
+    const v = pad.axes[b.index] ?? 0;
+    return b.dir > 0 ? v > DPAD_AXIS_THRESHOLD : v < -DPAD_AXIS_THRESHOLD;
+  }
+
+  // Same { held, pressed } shape the Keyboard produces. Reads via the pad's saved
+  // binding if it has one, else the 8BitDo SN30 defaults (d-pad on axes OR buttons).
   snapshot(): RawInput {
     const pad = this.active();
     if (!pad) {
       this.reset();
+      this.bindingId = null;
       return { held: emptyState(), pressed: emptyState() };
     }
+    this.syncBinding(pad);
 
-    const btn = (i: number): boolean => pad.buttons[i]?.pressed ?? false;
-    const ax = (i: number): number => pad.axes[i] ?? 0;
-
-    const ax0 = ax(0), ax1 = ax(1);
     const held = emptyState();
-
-    // D-pad as booleans, read UNCONDITIONALLY from BOTH the axis form (axes[0/1]
-    // as discrete -1/0/+1, or a left stick) AND the button form (buttons[12..15])
-    // — not gated on mapping, since an 8BitDo SN30 can report the D-pad either
-    // way depending on firmware/mode.
-    held.left = ax0 < -DPAD_AXIS_THRESHOLD || btn(STD_D_LEFT);
-    held.right = ax0 > DPAD_AXIS_THRESHOLD || btn(STD_D_RIGHT);
-    held.up = ax1 < -DPAD_AXIS_THRESHOLD || btn(STD_D_UP);
-    held.down = ax1 > DPAD_AXIS_THRESHOLD || btn(STD_D_DOWN);
-
-    held.cw = btn(BTN_A);   // A button (east, index 1) -> rotate clockwise
-    held.ccw = btn(BTN_B);  // B button (south, index 0) -> rotate counter-clockwise
-    // Check BOTH Start indices regardless of reported mapping — 8BitDo pads are
-    // inconsistent about where Start lands, so be generous (matches rally).
-    held.start = btn(STD_START) || btn(ALT_START);
+    if (this.binding) {
+      for (const b of BUTTONS) held[b] = this.readBind(pad, this.binding[b]);
+    } else {
+      const btn = (i: number): boolean => pad.buttons[i]?.pressed ?? false;
+      const ax = (i: number): number => pad.axes[i] ?? 0;
+      const ax0 = ax(0), ax1 = ax(1);
+      held.left = ax0 < -DPAD_AXIS_THRESHOLD || btn(STD_D_LEFT);
+      held.right = ax0 > DPAD_AXIS_THRESHOLD || btn(STD_D_RIGHT);
+      held.up = ax1 < -DPAD_AXIS_THRESHOLD || btn(STD_D_UP);
+      held.down = ax1 > DPAD_AXIS_THRESHOLD || btn(STD_D_DOWN);
+      held.cw = btn(BTN_A);   // A (east, 1) -> CW
+      held.ccw = btn(BTN_B);  // B (south, 0) -> CCW
+      held.start = btn(STD_START) || btn(ALT_START);
+    }
 
     const pressed = emptyState();
     for (const b of BUTTONS) {
       pressed[b] = held[b] && !this.prevHeld[b];
       this.prevHeld[b] = held[b];
     }
-
     return { held, pressed };
   }
 }
