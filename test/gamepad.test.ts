@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { GamepadInput } from '../src/shell/gamepad';
+import { GamepadInput, detectBind, padReleased } from '../src/shell/gamepad';
 
 // Build a fake Gamepad. Defaults match the captured 8BitDo SN30 NON-STANDARD
 // layout: 15 buttons, 10 axes, mapping "".
@@ -147,5 +147,67 @@ describe('GamepadInput — standard mapping', () => {
     const raw = reader(() => fakePad({ mapping: 'standard', buttonCount: 17, buttons: [0, 1] })).snapshot();
     expect(raw.held.cw).toBe(true);
     expect(raw.held.ccw).toBe(true);
+  });
+});
+
+// 8BitDo SF30 / SN30 Pro report the D-pad as a single POV "hat" on axis 9:
+// Up = -1, then clockwise in steps of 2/7 (right -3/7, down 1/7, left 5/7),
+// with the neutral position resting OUTSIDE [-1, 1] at ~3.29.
+describe('GamepadInput — 8BitDo POV hat D-pad (axis 9)', () => {
+  const UP = -1;
+  const UP_RIGHT = -5 / 7;
+  const RIGHT = -3 / 7;
+  const DOWN = 1 / 7;
+  const LEFT = 5 / 7;
+  const NEUTRAL = 3.2857;
+  const hatPad = (v: number) => fakePad({ axes: [0, 0, 0, 0, 0, 0, 0, 0, 0, v] });
+
+  it('reads Up from axis 9 = -1, with no other direction set', () => {
+    const raw = reader(() => hatPad(UP)).snapshot();
+    expect(raw.held.up).toBe(true);
+    expect(raw.held.down).toBe(false);
+    expect(raw.held.left).toBe(false);
+    expect(raw.held.right).toBe(false);
+  });
+
+  it('reads Down / Left / Right from their hat positions', () => {
+    expect(reader(() => hatPad(DOWN)).snapshot().held.down).toBe(true);
+    expect(reader(() => hatPad(LEFT)).snapshot().held.left).toBe(true);
+    expect(reader(() => hatPad(RIGHT)).snapshot().held.right).toBe(true);
+  });
+
+  it('reads a diagonal as two directions', () => {
+    const raw = reader(() => hatPad(UP_RIGHT)).snapshot();
+    expect(raw.held.up).toBe(true);
+    expect(raw.held.right).toBe(true);
+    expect(raw.held.down).toBe(false);
+    expect(raw.held.left).toBe(false);
+  });
+
+  it('treats the out-of-range neutral (~3.29) as nothing pressed', () => {
+    const raw = reader(() => hatPad(NEUTRAL)).snapshot();
+    expect(raw.held.up || raw.held.down || raw.held.left || raw.held.right).toBe(false);
+  });
+});
+
+// The config-capture helpers must understand a hat axis too: its neutral rests
+// out of range, which both detectBind and padReleased have to treat correctly.
+describe('config capture — hat axis', () => {
+  const pad = (v: number): { buttons: boolean[]; axes: number[] } => ({
+    buttons: [false, false],
+    axes: [0, 0, 0, 0, 0, 0, 0, 0, 0, v],
+  });
+
+  it('padReleased treats the hat neutral (~3.29) as released, a held direction as not', () => {
+    expect(padReleased(pad(3.2857))).toBe(true);
+    expect(padReleased(pad(-1))).toBe(false);
+  });
+
+  it('detectBind captures a hat press as a hat bind', () => {
+    expect(detectBind(pad(3.2857), pad(-1))).toEqual({ kind: 'hat', index: 9, value: -1 });
+  });
+
+  it('detectBind does not fire while the hat sits at neutral', () => {
+    expect(detectBind(pad(3.2857), pad(3.2857))).toBeNull();
   });
 });

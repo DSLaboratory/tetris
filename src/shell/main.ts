@@ -158,11 +158,34 @@ function stepConfig(): void {
   renderConfig(ctx, configPlayer, true, configRows(), prompt, `${cfgStep}/${BIND_ORDER.length} bound   ·   ESC — cancel`);
 }
 
-// backtick toggles a pad-debug overlay; Escape backs out of the config screen.
+// Dump every connected pad's RAW state to the console: id, mapping, pressed
+// button indices, and ALL axes at full precision (unfiltered, unrounded). Press
+// P with a button/direction held to capture an exact snapshot to copy out — the
+// fastest way to diagnose a pad's D-pad encoding in one go.
+function dumpPads(): void {
+  const pads = typeof navigator !== 'undefined' && navigator.getGamepads ? navigator.getGamepads() : [];
+  const lines = ['=== GAMEPAD DUMP (press P) ==='];
+  let any = false;
+  pads.forEach((p, i) => {
+    if (!p) return;
+    any = true;
+    const pressed = p.buttons.map((b, bi) => (b.pressed ? bi : -1)).filter((bi) => bi >= 0);
+    const axes = p.axes.map((a, ai) => `[${ai}]=${a.toFixed(4)}`).join('  ');
+    lines.push(`pad[${i}] id="${p.id}" mapping="${p.mapping || '(non-standard)'}"`);
+    lines.push(`  buttons pressed: [${pressed.join(', ')}]  (of ${p.buttons.length})`);
+    lines.push(`  axes (${p.axes.length}): ${axes}`);
+  });
+  if (!any) lines.push('(no pad seen yet — press a button on the pad first, then P)');
+  console.log(lines.join('\n'));
+}
+
+// backtick toggles a pad-debug overlay; P dumps raw pad state to the console;
+// Escape backs out of the config screen.
 let showPadDebug = false;
 window.addEventListener('keydown', (e) => {
   audio.unlock(); // first user gesture unblocks Web Audio
   if (e.key === '`') showPadDebug = !showPadDebug;
+  if (e.key === 'p' || e.key === 'P') dumpPads();
   if (e.key === 'm' || e.key === 'M') audio.toggleMute();
   if (e.key === 'Escape' && screen === 'config') { screen = 'menu'; resize(); }
 });
