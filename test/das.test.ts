@@ -1,6 +1,6 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { createGame, tick } from '../src/core/game';
-import { mkInput, IDLE, tickN } from './helpers';
+import { IDLE, mkInput, tickN } from './helpers';
 
 const HOLD_RIGHT = mkInput({ rightHeld: true });
 const PRESS_RIGHT = mkInput({ rightPressed: true, rightHeld: true });
@@ -36,7 +36,7 @@ describe('DAS (16 / 6)', () => {
   it('a charged DAS carries to the next piece: it shifts on its first frame', () => {
     const g = createGame(0); // gravity 48: the charge completes before the lock
     g.piece = { id: 3, rot: 0, x: 9, y: 18 }; // O against the right wall, on the floor
-    let prev = g.piece;
+    const prev = g.piece;
     // Hold right through the lock and the ARE; stop when the next piece spawns.
     for (let i = 0; i < 80 && (g.piece === prev || g.piece === null); i++) tick(g, HOLD_RIGHT);
     expect(g.piece).not.toBe(prev); // a new piece spawned

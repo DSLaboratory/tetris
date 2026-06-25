@@ -1,6 +1,6 @@
-import { describe, it, expect } from 'vitest';
-import { createGame, spawnPiece, tick, collides, WIDTH } from '../src/core/game';
-import { mkInput, IDLE, tickN, fillRow } from './helpers';
+import { describe, expect, it } from 'vitest';
+import { collides, createGame, spawnPiece, tick, WIDTH } from '../src/core/game';
+import { fillRow, IDLE, mkInput, tickN } from './helpers';
 
 describe('spawning', () => {
   it('pieces spawn at (5, 0) in orientation 0', () => {

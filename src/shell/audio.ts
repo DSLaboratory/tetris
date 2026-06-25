@@ -12,13 +12,13 @@
 // Browsers refuse audio until a user gesture, so the AudioContext is lazy: the
 // shell calls unlock() on the first input and until then every sound no-ops.
 
-import { Game, Phase } from '../core/game';
+import type { Game, Phase } from '../core/game';
 
 // --- voice levels (peak gain per event) -------------------------------------
 // Move/rotate sit far below everything else on purpose: they fire constantly.
 const VOL_MOVE = 0.04;
 const VOL_ROTATE = 0.05;
-const VOL_LOCK = 0.10;
+const VOL_LOCK = 0.1;
 const VOL_CLEAR = 0.11;
 const VOL_TETRIS = 0.16;
 const VOL_LEVEL = 0.12;
@@ -27,7 +27,7 @@ const VOL_GAMEOVER = 0.13;
 // --- pitches (Hz) -----------------------------------------------------------
 // A small chiptune scale; named so the layout reads like the renderer's COLORS.
 const C3 = 130.81;
-const G3 = 196.00;
+const G3 = 196.0;
 const A4 = 440;
 const C5 = 523.25;
 const E5 = 659.25;
@@ -48,16 +48,16 @@ const GAMEOVER_FALL = [A5, E5, C5, A4];
 const DUR_MOVE = 0.025;
 const DUR_ROTATE = 0.04;
 const DUR_LOCK = 0.07;
-const NOTE_CLEAR = 0.06;   // per note in the rising clear figure
-const NOTE_LEVEL = 0.07;   // per note in the level-up tone
+const NOTE_CLEAR = 0.06; // per note in the rising clear figure
+const NOTE_LEVEL = 0.07; // per note in the level-up tone
 const NOTE_GAMEOVER = 0.16; // per note in the descending game-over tone
 
 // What we remember between frames - just enough to diff the events we care
 // about. Mirrors the renderer's read-only view of Game.
 interface Snapshot {
-  px: number | null;   // active piece x, or null when there is no live piece
-  rot: number | null;  // active piece rotation
-  hadPiece: boolean;   // a piece was falling last frame
+  px: number | null; // active piece x, or null when there is no live piece
+  rot: number | null; // active piece rotation
+  hadPiece: boolean; // a piece was falling last frame
   phase: Phase;
   lines: number;
   level: number;
@@ -75,8 +75,9 @@ export class Audio {
   unlock(): void {
     if (!this.ctx) {
       // Guard the vendor-prefixed name without leaning on a global type.
-      const Ctor = window.AudioContext
-        ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      const Ctor =
+        window.AudioContext ??
+        (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
       if (!Ctor) return; // no Web Audio: stay a silent no-op forever
       this.ctx = new Ctor();
       this.master = this.ctx.createGain();
@@ -176,11 +177,19 @@ export class Audio {
     const ctx = this.ctx;
     if (!ctx) return;
     const base = ctx.currentTime;
-    freqs.forEach((freq, i) => this.scheduled(freq, base + i * step, step, peak, type));
+    freqs.forEach((freq, i) => {
+      this.scheduled(freq, base + i * step, step, peak, type);
+    });
   }
 
   // As blip(), but at an absolute start time so notes can be chained.
-  private scheduled(freq: number, start: number, dur: number, peak: number, type: OscillatorType): void {
+  private scheduled(
+    freq: number,
+    start: number,
+    dur: number,
+    peak: number,
+    type: OscillatorType,
+  ): void {
     const ctx = this.ctx;
     const master = this.master;
     if (!ctx || !master) return;
@@ -206,9 +215,10 @@ export class Audio {
     const ctx = this.ctx;
     if (!ctx) return;
     const t = ctx.currentTime;
-    this.scheduled(G3, t, 0.2, VOL_TETRIS, 'square');           // low punch
+    this.scheduled(G3, t, 0.2, VOL_TETRIS, 'square'); // low punch
     this.scheduled(C3, t, 0.2, VOL_TETRIS * 0.8, 'triangle');
-    TETRIS_RUN.forEach((f, i) => {                              // rising run, doubled an octave down
+    TETRIS_RUN.forEach((f, i) => {
+      // rising run, doubled an octave down
       const s = t + 0.03 + i * 0.05;
       this.scheduled(f, s, 0.08, VOL_TETRIS, 'square');
       this.scheduled(f / 2, s, 0.08, VOL_TETRIS * 0.4, 'triangle');
@@ -219,7 +229,7 @@ export class Audio {
     this.scheduled(C5, c, 0.34, VOL_TETRIS * 0.7, 'triangle');
     this.scheduled(E5, c, 0.34, VOL_TETRIS * 0.55, 'triangle');
     this.scheduled(G5, c, 0.34, VOL_TETRIS * 0.5, 'triangle');
-    this.scheduled(C6, c, 0.34, VOL_TETRIS * 0.4, 'square');    // a touch of sparkle on top
+    this.scheduled(C6, c, 0.34, VOL_TETRIS * 0.4, 'square'); // a touch of sparkle on top
   }
 }
 

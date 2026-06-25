@@ -1,8 +1,7 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
+import { createGame, tick } from '../src/core/game';
 import { gravityFrames } from '../src/core/tables';
-import { createGame } from '../src/core/game';
 import { IDLE, tickN } from './helpers';
-import { tick } from '../src/core/game';
 
 describe('NTSC gravity table', () => {
   it('matches the published frames-per-row values exactly', () => {
