@@ -1,7 +1,7 @@
-import { describe, it, expect } from 'vitest';
-import { createGame, spawnPiece, tick, Game, WIDTH } from '../src/core/game';
+import { describe, expect, it } from 'vitest';
+import { createGame, type Game, spawnPiece, tick, WIDTH } from '../src/core/game';
 import { lfsrNext } from '../src/core/rng';
-import { IDLE, tickN, fillRow } from './helpers';
+import { fillRow, IDLE, tickN } from './helpers';
 
 // Horizontal mode is the same machine with two wells. Everything here
 // tests the ONLY new mechanics: the side roll and the shared fate.

@@ -5,14 +5,19 @@
 // is always 10 across and 20 deep IN WELL SPACE - which way "down" points on
 // screen is entirely the renderer's business. The rules never change.
 
+import { cellsOf, type PieceId, rotateCcw, rotateCw, SPAWN_X, SPAWN_Y } from './pieces';
+import { DEFAULT_SEED, Rng } from './rng';
 import {
-  PieceId, cellsOf, rotateCw, rotateCcw, SPAWN_X, SPAWN_Y,
-} from './pieces';
-import {
-  gravityFrames, scoreForLines, levelForLines, MAX_SCORE, CLEAR_FRAMES,
-  SOFT_DROP_FRAMES, DAS_CHARGED, DAS_RELOAD, areFrames,
+  areFrames,
+  CLEAR_FRAMES,
+  DAS_CHARGED,
+  DAS_RELOAD,
+  gravityFrames,
+  levelForLines,
+  MAX_SCORE,
+  SOFT_DROP_FRAMES,
+  scoreForLines,
 } from './tables';
-import { Rng, DEFAULT_SEED } from './rng';
 
 export const WIDTH = 10;
 export const HEIGHT = 20;
@@ -122,13 +127,19 @@ function rollWell(g: Game): number {
 // (the renderer just doesn't draw cells above row 0). The stack only occupies
 // rows 0..19, so occupancy is checked only there.
 export const BUFFER_ROWS = 2;
-export function collides(board: Uint8Array, id: PieceId, rot: number, x: number, y: number): boolean {
+export function collides(
+  board: Uint8Array,
+  id: PieceId,
+  rot: number,
+  x: number,
+  y: number,
+): boolean {
   for (const [dx, dy] of cellsOf(id, rot)) {
     const cx = x + dx;
     const cy = y + dy;
-    if (cx < 0 || cx >= WIDTH) return true;        // side walls
-    if (cy >= HEIGHT) return true;                 // floor
-    if (cy < -BUFFER_ROWS) return true;            // above the hidden buffer
+    if (cx < 0 || cx >= WIDTH) return true; // side walls
+    if (cy >= HEIGHT) return true; // floor
+    if (cy < -BUFFER_ROWS) return true; // above the hidden buffer
     if (cy >= 0 && board[cy * WIDTH + cx]) return true; // the stack (rows 0..19)
   }
   return false;

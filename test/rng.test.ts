@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { lfsrNext, Rng, DEFAULT_SEED } from '../src/core/rng';
+import { describe, expect, it } from 'vitest';
+import { DEFAULT_SEED, lfsrNext, Rng } from '../src/core/rng';
 
 describe('NES LFSR', () => {
   it('has the documented period of 32767', () => {
@@ -78,6 +78,6 @@ describe('reroll-once piece picker', () => {
     }
     const rate = repeats / N;
     expect(rate).toBeGreaterThan(0.005); // repeats must still exist (not 7-bag)
-    expect(rate).toBeLessThan(0.08);     // but far below uniform's 14.3%
+    expect(rate).toBeLessThan(0.08); // but far below uniform's 14.3%
   });
 });

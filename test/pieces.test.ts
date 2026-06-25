@@ -1,6 +1,12 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import {
-  PIECES, PIECE_NAMES, PieceId, cellsOf, rotateCw, rotateCcw, orientationCount,
+  cellsOf,
+  orientationCount,
+  PIECE_NAMES,
+  PIECES,
+  type PieceId,
+  rotateCcw,
+  rotateCw,
 } from '../src/core/pieces';
 
 // Render an orientation onto a 5x5 grid as strings, centered at (2,2),
@@ -27,111 +33,45 @@ describe('NRS orientation counts', () => {
 
 describe('spawn orientations (index 0)', () => {
   it('T spawns pointing down', () => {
-    expect(mask(id('T'), 0)).toEqual([
-      '.....',
-      '.....',
-      '.XXX.',
-      '..X..',
-      '.....',
-    ]);
+    expect(mask(id('T'), 0)).toEqual(['.....', '.....', '.XXX.', '..X..', '.....']);
   });
 
   it('J spawns flat with foot bottom-right', () => {
-    expect(mask(id('J'), 0)).toEqual([
-      '.....',
-      '.....',
-      '.XXX.',
-      '...X.',
-      '.....',
-    ]);
+    expect(mask(id('J'), 0)).toEqual(['.....', '.....', '.XXX.', '...X.', '.....']);
   });
 
   it('L spawns flat with foot bottom-left', () => {
-    expect(mask(id('L'), 0)).toEqual([
-      '.....',
-      '.....',
-      '.XXX.',
-      '.X...',
-      '.....',
-    ]);
+    expect(mask(id('L'), 0)).toEqual(['.....', '.....', '.XXX.', '.X...', '.....']);
   });
 
   it('Z spawns horizontal', () => {
-    expect(mask(id('Z'), 0)).toEqual([
-      '.....',
-      '.....',
-      '.XX..',
-      '..XX.',
-      '.....',
-    ]);
+    expect(mask(id('Z'), 0)).toEqual(['.....', '.....', '.XX..', '..XX.', '.....']);
   });
 
   it('S spawns horizontal', () => {
-    expect(mask(id('S'), 0)).toEqual([
-      '.....',
-      '.....',
-      '..XX.',
-      '.XX..',
-      '.....',
-    ]);
+    expect(mask(id('S'), 0)).toEqual(['.....', '.....', '..XX.', '.XX..', '.....']);
   });
 
   it('I spawns horizontal', () => {
-    expect(mask(id('I'), 0)).toEqual([
-      '.....',
-      '.....',
-      'XXXX.',
-      '.....',
-      '.....',
-    ]);
+    expect(mask(id('I'), 0)).toEqual(['.....', '.....', 'XXXX.', '.....', '.....']);
   });
 
   it('O is a square', () => {
-    expect(mask(id('O'), 0)).toEqual([
-      '.....',
-      '.....',
-      '.XX..',
-      '.XX..',
-      '.....',
-    ]);
+    expect(mask(id('O'), 0)).toEqual(['.....', '.....', '.XX..', '.XX..', '.....']);
   });
 });
 
 describe('clockwise rotation cycle', () => {
   it('T cycles down -> left -> up -> right', () => {
     const t = id('T');
-    expect(mask(t, rotateCw(t, 0))).toEqual([
-      '.....',
-      '..X..',
-      '.XX..',
-      '..X..',
-      '.....',
-    ]); // left
-    expect(mask(t, rotateCw(t, 1))).toEqual([
-      '.....',
-      '..X..',
-      '.XXX.',
-      '.....',
-      '.....',
-    ]); // up
-    expect(mask(t, rotateCw(t, 2))).toEqual([
-      '.....',
-      '..X..',
-      '..XX.',
-      '..X..',
-      '.....',
-    ]); // right
+    expect(mask(t, rotateCw(t, 0))).toEqual(['.....', '..X..', '.XX..', '..X..', '.....']); // left
+    expect(mask(t, rotateCw(t, 1))).toEqual(['.....', '..X..', '.XXX.', '.....', '.....']); // up
+    expect(mask(t, rotateCw(t, 2))).toEqual(['.....', '..X..', '..XX.', '..X..', '.....']); // right
   });
 
   it('I toggles between horizontal and vertical', () => {
     const i = id('I');
-    expect(mask(i, rotateCw(i, 0))).toEqual([
-      '..X..',
-      '..X..',
-      '..X..',
-      '..X..',
-      '.....',
-    ]);
+    expect(mask(i, rotateCw(i, 0))).toEqual(['..X..', '..X..', '..X..', '..X..', '.....']);
     expect(rotateCw(i, 1)).toBe(0);
     expect(rotateCcw(i, 0)).toBe(1); // CCW reaches the same single alternate
   });

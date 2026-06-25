@@ -1,4 +1,4 @@
-import { Game, InputFrame, tick } from '../src/core/game';
+import { type Game, type InputFrame, tick } from '../src/core/game';
 
 export function mkInput(partial: Partial<InputFrame> = {}): InputFrame {
   return {

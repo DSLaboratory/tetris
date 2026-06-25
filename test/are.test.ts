@@ -1,7 +1,7 @@
-import { describe, it, expect } from 'vitest';
-import { areFrames, CLEAR_FRAMES } from '../src/core/tables';
+import { describe, expect, it } from 'vitest';
 import { createGame, tick } from '../src/core/game';
-import { mkInput, IDLE, tickN, fillRow } from './helpers';
+import { areFrames, CLEAR_FRAMES } from '../src/core/tables';
+import { fillRow, IDLE, mkInput, tickN } from './helpers';
 
 describe('ARE table', () => {
   it('is 10 frames in the bottom two rows, +2 per 4-row band, capped at 18', () => {

@@ -6,7 +6,7 @@
 // them into well-space input per game mode. The core never knows which
 // way is down on screen.
 
-import { InputFrame } from '../core/game';
+import type { InputFrame } from '../core/game';
 
 export type Button = 'up' | 'down' | 'left' | 'right' | 'cw' | 'ccw' | 'start';
 
@@ -24,12 +24,18 @@ export const KEYMAP_P1: Record<string, Button> = {
   Enter: 'start',
 };
 export const KEYMAP_P2: Record<string, Button> = {
-  w: 'up', W: 'up',
-  a: 'left', A: 'left',
-  d: 'right', D: 'right',
-  s: 'down', S: 'down',
-  q: 'ccw', Q: 'ccw',
-  e: 'cw', E: 'cw',
+  w: 'up',
+  W: 'up',
+  a: 'left',
+  A: 'left',
+  d: 'right',
+  D: 'right',
+  s: 'down',
+  S: 'down',
+  q: 'ccw',
+  Q: 'ccw',
+  e: 'cw',
+  E: 'cw',
   // start (pause) stays a P1 / pad concern in versus; P2 needs no start key.
 };
 

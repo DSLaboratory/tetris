@@ -5,7 +5,7 @@
 // (left well 90° clockwise, right well 90° counter-clockwise), so piece
 // chirality is preserved and Z/X mean the same thing everywhere.
 
-import { Game, WIDTH, HEIGHT } from '../core/game';
+import { type Game, HEIGHT, WIDTH } from '../core/game';
 import { cellsOf } from '../core/pieces';
 import { CLEAR_FRAMES } from '../core/tables';
 
@@ -21,6 +21,7 @@ export const H_CANVAS_H = BOARD_Y + WIDTH * H_CELL + 176;
 
 const SIDEBAR_X = BOARD_X + WIDTH * CELL + 36;
 
+// biome-ignore format: one entry per piece on one line, aligned under the T J Z O S L I legend
 // T J Z O S L I
 const COLORS = ['#b14ae3', '#4361ee', '#ef3b4c', '#f5c518', '#28c76f', '#f77f1b', '#22c1dd'];
 
@@ -31,55 +32,62 @@ const SEAM = '#5a5a6a';
 const TEXT = '#d8d8e0';
 const DIM = '#7a7a88';
 const ACCENT = '#6cb6ff'; // the selected menu row / live thing
-const GREEN = '#28c76f';  // a bound / confirmed value in the config screen
+const GREEN = '#28c76f'; // a bound / confirmed value in the config screen
 
 // Two-player (versus) layout: two FULL-SIZE classic wells (same cell as classic),
 // back to back, each player's NEXT preview on their OUTER side (P1 left, P2 right).
-export const V_CELL = CELL;        // same size as classic mode
-const V_WELL_W = WIDTH * V_CELL;   // 280
-const V_WELL_H = HEIGHT * V_CELL;  // 560
+export const V_CELL = CELL; // same size as classic mode
+const V_WELL_W = WIDTH * V_CELL; // 280
+const V_WELL_H = HEIGHT * V_CELL; // 560
 const V_MARGIN = 20;
-const V_NEXT_W = 96;               // outer NEXT-preview column per player
-const V_TOP = 48;                  // room above a well for the PLAYER label
-const V_GAP = 128;                 // generous space between the two wells
-const V_HUD_H = 96;                // compact HUD below each well
+const V_NEXT_W = 96; // outer NEXT-preview column per player
+const V_TOP = 48; // room above a well for the PLAYER label
+const V_GAP = 128; // generous space between the two wells
+const V_HUD_H = 96; // compact HUD below each well
 export const V_CANVAS_W = V_MARGIN * 2 + V_NEXT_W * 2 + V_WELL_W * 2 + V_GAP; // 920
-export const V_CANVAS_H = V_TOP + V_WELL_H + V_HUD_H + 16;                    // 720
+export const V_CANVAS_H = V_TOP + V_WELL_H + V_HUD_H + 16; // 720
 
-function cell(ctx: CanvasRenderingContext2D, px: number, py: number, size: number, color: string): void {
+function cell(
+  ctx: CanvasRenderingContext2D,
+  px: number,
+  py: number,
+  size: number,
+  color: string,
+): void {
   ctx.fillStyle = color;
   ctx.fillRect(px + 1, py + 1, size - 2, size - 2);
 }
 
-function text(ctx: CanvasRenderingContext2D, s: string, x: number, y: number, size = 16, color = TEXT): void {
+function text(
+  ctx: CanvasRenderingContext2D,
+  s: string,
+  x: number,
+  y: number,
+  size = 16,
+  color = TEXT,
+): void {
   ctx.fillStyle = color;
   ctx.font = `${size}px ui-monospace, SFMono-Regular, Menlo, monospace`;
   ctx.fillText(s, x, y);
 }
 
-function overlay(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, lines: [string, number][]): void {
-  ctx.fillStyle = 'rgba(16, 16, 20, 0.82)';
-  ctx.fillRect(x, y, w, h);
-  const cx = x + w / 2;
-  let ty = y + h / 2 - (lines.length * 24) / 2;
-  ctx.textAlign = 'center';
-  for (const [s, size] of lines) {
-    text(ctx, s, cx, ty, size);
-    ty += size + 18;
-  }
-  ctx.textAlign = 'left';
-}
-
 // A pause / game-over overlay with selectable rows; the shell owns the cursor.
 export interface OverlayMenu {
   title: string;
-  note?: string;        // e.g. the final score
-  options: string[];    // e.g. RESUME / RESTART / MAIN MENU
+  note?: string; // e.g. the final score
+  options: string[]; // e.g. RESUME / RESTART / MAIN MENU
   sel: number;
-  hideBoard?: boolean;  // pause hides the playfield (NES style); game-over shows it
+  hideBoard?: boolean; // pause hides the playfield (NES style); game-over shows it
 }
 
-function drawOverlayMenu(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, ov: OverlayMenu): void {
+function drawOverlayMenu(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  ov: OverlayMenu,
+): void {
   ctx.fillStyle = 'rgba(16, 16, 20, 0.9)';
   ctx.fillRect(x, y, w, h);
   const cx = x + w / 2;
@@ -88,12 +96,18 @@ function drawOverlayMenu(ctx: CanvasRenderingContext2D, x: number, y: number, w:
   let ty = y + (h - blockH) / 2 + 26;
   text(ctx, ov.title, cx, ty, 28, /WIN/.test(ov.title) ? ACCENT : TEXT);
   ty += ov.note ? 24 : 36;
-  if (ov.note) { text(ctx, ov.note, cx, ty, 14, DIM); ty += 30; }
+  if (ov.note) {
+    text(ctx, ov.note, cx, ty, 14, DIM);
+    ty += 30;
+  }
   ty += 8;
   ov.options.forEach((opt, i) => {
     const oy = ty + i * 34;
     const on = i === ov.sel;
-    if (on) { ctx.fillStyle = 'rgba(108,182,255,0.12)'; ctx.fillRect(cx - 120, oy - 19, 240, 28); }
+    if (on) {
+      ctx.fillStyle = 'rgba(108,182,255,0.12)';
+      ctx.fillRect(cx - 120, oy - 19, 240, 28);
+    }
     text(ctx, opt, cx, oy, 18, on ? ACCENT : DIM);
   });
   text(ctx, 'UP / DOWN   ·   START SELECT', cx, y + h - 22, 11, DIM);
@@ -152,7 +166,13 @@ function drawClassicHud(ctx: CanvasRenderingContext2D, g: Game): void {
   ctx.lineWidth = 2;
   ctx.strokeRect(x, 300, 5 * CELL, 4 * CELL);
   for (const [dx, dy] of cellsOf(g.next, 0)) {
-    cell(ctx, x + (dx + 2) * CELL + CELL / 2, 300 + (dy + 1) * CELL + CELL / 2, CELL, COLORS[g.next]);
+    cell(
+      ctx,
+      x + (dx + 2) * CELL + CELL / 2,
+      300 + (dy + 1) * CELL + CELL / 2,
+      CELL,
+      COLORS[g.next],
+    );
   }
 }
 
@@ -227,7 +247,13 @@ function drawHorizontalHud(ctx: CanvasRenderingContext2D, g: Game): void {
   ctx.lineWidth = 2;
   ctx.strokeRect(boxX + 60, boxY, 5 * H_CELL, 4 * H_CELL);
   for (const [dx, dy] of cellsOf(g.next, 0)) {
-    cell(ctx, boxX + 60 + (dx + 2) * H_CELL + H_CELL / 2, boxY + (dy + 1) * H_CELL + H_CELL / 2, H_CELL, COLORS[g.next]);
+    cell(
+      ctx,
+      boxX + 60 + (dx + 2) * H_CELL + H_CELL / 2,
+      boxY + (dy + 1) * H_CELL + H_CELL / 2,
+      H_CELL,
+      COLORS[g.next],
+    );
   }
 }
 
@@ -260,7 +286,13 @@ export function renderHorizontal(ctx: CanvasRenderingContext2D, g: Game, ov?: Ov
 
 // One player's panel in two-player mode: a PLAYER label, a compact well, and a
 // small HUD below, drawn at horizontal offset `ox`. Same rules, smaller cells.
-function drawVersusPlayer(ctx: CanvasRenderingContext2D, g: Game, ox: number, nextX: number, label: string): void {
+function drawVersusPlayer(
+  ctx: CanvasRenderingContext2D,
+  g: Game,
+  ox: number,
+  nextX: number,
+  label: string,
+): void {
   const oy = V_TOP;
   ctx.textAlign = 'center';
   text(ctx, label, ox + V_WELL_W / 2, oy - 16, 16, DIM);
@@ -284,7 +316,8 @@ function drawVersusPlayer(ctx: CanvasRenderingContext2D, g: Game, ox: number, ne
   if (g.piece) {
     for (const [dx, dy] of cellsOf(g.piece.id, g.piece.rot)) {
       const y = g.piece.y + dy;
-      if (y >= 0) cell(ctx, ox + (g.piece.x + dx) * V_CELL, oy + y * V_CELL, V_CELL, COLORS[g.piece.id]);
+      if (y >= 0)
+        cell(ctx, ox + (g.piece.x + dx) * V_CELL, oy + y * V_CELL, V_CELL, COLORS[g.piece.id]);
     }
   }
 
@@ -309,11 +342,16 @@ function drawVersusPlayer(ctx: CanvasRenderingContext2D, g: Game, ox: number, ne
   }
 }
 
-export function renderVersus(ctx: CanvasRenderingContext2D, g1: Game, g2: Game, ov?: OverlayMenu): void {
+export function renderVersus(
+  ctx: CanvasRenderingContext2D,
+  g1: Game,
+  g2: Game,
+  ov?: OverlayMenu,
+): void {
   ctx.fillStyle = BG;
   ctx.fillRect(0, 0, V_CANVAS_W, V_CANVAS_H);
-  const p1Well = V_MARGIN + V_NEXT_W;              // P1 well, NEXT to its left
-  const p2Well = p1Well + V_WELL_W + V_GAP;        // P2 well, NEXT to its right
+  const p1Well = V_MARGIN + V_NEXT_W; // P1 well, NEXT to its left
+  const p2Well = p1Well + V_WELL_W + V_GAP; // P2 well, NEXT to its right
   drawVersusPlayer(ctx, g1, p1Well, V_MARGIN + 4, 'PLAYER 1');
   drawVersusPlayer(ctx, g2, p2Well, p2Well + V_WELL_W + 8, 'PLAYER 2');
   if (ov) drawOverlayMenu(ctx, 0, 0, V_CANVAS_W, V_CANVAS_H, ov);
@@ -322,13 +360,22 @@ export function renderVersus(ctx: CanvasRenderingContext2D, g1: Game, g2: Game, 
 /* -------------------------------- menu --------------------------------- */
 
 export type Mode = 'classic' | 'horizontal' | 'versus';
-const MODE_LABEL: Record<Mode, string> = { classic: 'CLASSIC', horizontal: 'HORIZONTAL', versus: '2-PLAYER' };
+const MODE_LABEL: Record<Mode, string> = {
+  classic: 'CLASSIC',
+  horizontal: 'HORIZONTAL',
+  versus: '2-PLAYER',
+};
 
 // The menu's selectable rows, in order; the shell owns the cursor (`sel`).
 export const MENU_ROWS = ['mode', 'level', 'config1', 'config2', 'start'] as const;
-export type MenuRow = typeof MENU_ROWS[number];
+export type MenuRow = (typeof MENU_ROWS)[number];
 
-export function renderMenu(ctx: CanvasRenderingContext2D, sel: number, mode: Mode, level: number): void {
+export function renderMenu(
+  ctx: CanvasRenderingContext2D,
+  sel: number,
+  mode: Mode,
+  level: number,
+): void {
   ctx.fillStyle = BG;
   ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
   const cx = CANVAS_W / 2;
@@ -366,26 +413,41 @@ export function renderMenu(ctx: CanvasRenderingContext2D, sel: number, mode: Mod
   });
 
   const settingRow = sel === 0 || sel === 1;
-  text(ctx, settingRow ? 'UP/DOWN MOVE   LEFT/RIGHT CHANGE   ENTER SELECT' : 'UP/DOWN MOVE   ENTER SELECT',
-    cx, CANVAS_H - 64, 13, DIM);
-  const controls = mode === 'horizontal'
-    ? 'PLAY: UP/DOWN MOVE · LEFT/RIGHT DROP · Z/X ROTATE'
-    : mode === 'versus'
-      ? 'P1: ARROWS + Z/X     P2: WASD + Q/E     (or two gamepads)'
-      : 'PLAY: ARROWS MOVE/DROP · Z CCW · X CW · ENTER PAUSE';
+  text(
+    ctx,
+    settingRow ? 'UP/DOWN MOVE   LEFT/RIGHT CHANGE   ENTER SELECT' : 'UP/DOWN MOVE   ENTER SELECT',
+    cx,
+    CANVAS_H - 64,
+    13,
+    DIM,
+  );
+  const controls =
+    mode === 'horizontal'
+      ? 'PLAY: UP/DOWN MOVE · LEFT/RIGHT DROP · Z/X ROTATE'
+      : mode === 'versus'
+        ? 'P1: ARROWS + Z/X     P2: WASD + Q/E     (or two gamepads)'
+        : 'PLAY: ARROWS MOVE/DROP · Z CCW · X CW · ENTER PAUSE';
   text(ctx, controls, cx, CANVAS_H - 40, 12, DIM);
   ctx.textAlign = 'left';
 }
 
 /* --------------------------- gamepad config ---------------------------- */
 
-export interface ConfigRow { label: string; value: string; state: 'done' | 'current' | 'pending'; }
+export interface ConfigRow {
+  label: string;
+  value: string;
+  state: 'done' | 'current' | 'pending';
+}
 
 // The per-pad bind walkthrough. Presentation only — main.ts owns the capture flow
 // and hands this plain strings, so render.ts keeps reading nothing it shouldn't.
 export function renderConfig(
   ctx: CanvasRenderingContext2D,
-  player: number, connected: boolean, rows: ConfigRow[], prompt: string, hint: string,
+  player: number,
+  connected: boolean,
+  rows: ConfigRow[],
+  prompt: string,
+  hint: string,
 ): void {
   ctx.fillStyle = BG;
   ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
@@ -394,7 +456,7 @@ export function renderConfig(
   text(ctx, `CONFIGURE PLAYER ${player} PAD`, cx, 64, 22);
 
   if (!connected) {
-    text(ctx, 'Connect player ' + player + "'s controller", cx, 220, 17);
+    text(ctx, `Connect player ${player}'s controller`, cx, 220, 17);
     text(ctx, 'and press any button to begin', cx, 248, 13, DIM);
     text(ctx, hint, cx, CANVAS_H - 40, 12, DIM);
     ctx.textAlign = 'left';

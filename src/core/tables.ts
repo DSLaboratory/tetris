@@ -6,6 +6,7 @@
 export const FRAME_RATE = 60.0988;
 
 // Frames the piece waits before dropping one row, by level (NTSC).
+// biome-ignore format: hand-aligned table — the level groupings read down the columns
 const GRAVITY_TABLE = [
   48, 43, 38, 33, 28, // levels 0-4
   23, 18, 13, 8, 6,   // levels 5-9

@@ -1,9 +1,7 @@
-import { describe, it, expect } from 'vitest';
-import {
-  scoreForLines, firstLevelUpLines, levelForLines, CLEAR_FRAMES,
-} from '../src/core/tables';
+import { describe, expect, it } from 'vitest';
 import { createGame, tick, WIDTH } from '../src/core/game';
-import { IDLE, tickN, fillRow } from './helpers';
+import { CLEAR_FRAMES, firstLevelUpLines, levelForLines, scoreForLines } from '../src/core/tables';
+import { fillRow, IDLE, tickN } from './helpers';
 
 describe('line scores', () => {
   it('uses the 40 / 100 / 300 / 1200 base values', () => {

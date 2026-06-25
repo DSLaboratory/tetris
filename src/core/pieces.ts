@@ -20,6 +20,7 @@ export const PIECE_NAMES = ['T', 'J', 'Z', 'O', 'S', 'L', 'I'] as const;
 export type Cell = readonly [dx: number, dy: number];
 export type Orientation = readonly Cell[];
 
+// biome-ignore format: hand-aligned NRS matrix — one line per orientation reads as the piece shape
 const T: Orientation[] = [
   [[-1, 0], [0, 0], [1, 0], [0, 1]],   // down (spawn)
   [[0, -1], [0, 0], [0, 1], [-1, 0]],  // left
@@ -27,6 +28,7 @@ const T: Orientation[] = [
   [[0, -1], [0, 0], [0, 1], [1, 0]],   // right
 ];
 
+// biome-ignore format: hand-aligned NRS matrix — one line per orientation reads as the piece shape
 const J: Orientation[] = [
   [[-1, 0], [0, 0], [1, 0], [1, 1]],   // down (spawn): foot bottom-right
   [[0, -1], [0, 0], [0, 1], [-1, 1]],  // left: foot bottom-left
@@ -34,20 +36,24 @@ const J: Orientation[] = [
   [[0, -1], [1, -1], [0, 0], [0, 1]],  // right: nub top-right
 ];
 
+// biome-ignore format: hand-aligned NRS matrix — one line per orientation reads as the piece shape
 const Z: Orientation[] = [
   [[-1, 0], [0, 0], [0, 1], [1, 1]],   // horizontal (spawn)
   [[0, -1], [-1, 0], [0, 0], [-1, 1]], // vertical
 ];
 
+// biome-ignore format: hand-aligned NRS matrix — one line per orientation reads as the piece shape
 const O: Orientation[] = [
   [[-1, 0], [0, 0], [-1, 1], [0, 1]],
 ];
 
+// biome-ignore format: hand-aligned NRS matrix — one line per orientation reads as the piece shape
 const S: Orientation[] = [
   [[0, 0], [1, 0], [-1, 1], [0, 1]],   // horizontal (spawn)
   [[-1, -1], [-1, 0], [0, 0], [0, 1]], // vertical
 ];
 
+// biome-ignore format: hand-aligned NRS matrix — one line per orientation reads as the piece shape
 const L: Orientation[] = [
   [[-1, 0], [0, 0], [1, 0], [-1, 1]],  // down (spawn): foot bottom-left
   [[-1, -1], [0, -1], [0, 0], [0, 1]], // left: nub top-left
@@ -55,6 +61,7 @@ const L: Orientation[] = [
   [[0, -1], [0, 0], [0, 1], [1, 1]],   // right: foot bottom-right
 ];
 
+// biome-ignore format: hand-aligned NRS matrix — one line per orientation reads as the piece shape
 const I: Orientation[] = [
   [[-2, 0], [-1, 0], [0, 0], [1, 0]],  // horizontal (spawn)
   [[0, -2], [0, -1], [0, 0], [0, 1]],  // vertical
