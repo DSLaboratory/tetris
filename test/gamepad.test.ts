@@ -1,15 +1,17 @@
-import { describe, it, expect } from 'vitest';
-import { GamepadInput, detectBind, padReleased } from '../src/shell/gamepad';
+import { describe, expect, it } from 'vitest';
+import { detectBind, GamepadInput, padReleased } from '../src/shell/gamepad';
 
 // Build a fake Gamepad. Defaults match the captured 8BitDo SN30 NON-STANDARD
 // layout: 15 buttons, 10 axes, mapping "".
-function fakePad(opts: {
-  buttons?: number[];      // indices currently pressed
-  axes?: number[];
-  mapping?: string;
-  buttonCount?: number;
-  axisCount?: number;
-} = {}): Gamepad {
+function fakePad(
+  opts: {
+    buttons?: number[]; // indices currently pressed
+    axes?: number[];
+    mapping?: string;
+    buttonCount?: number;
+    axisCount?: number;
+  } = {},
+): Gamepad {
   const buttonCount = opts.buttonCount ?? 15;
   const axisCount = opts.axisCount ?? 10;
   const down = new Set(opts.buttons ?? []);
@@ -117,34 +119,50 @@ describe('GamepadInput — SN30 non-standard layout (mapping "")', () => {
 
 describe('GamepadInput — standard mapping', () => {
   it('reads the D-pad from buttons[12..15] and Start from buttons[9]', () => {
-    const up = reader(() => fakePad({ mapping: 'standard', buttonCount: 17, buttons: [12] })).snapshot();
+    const up = reader(() =>
+      fakePad({ mapping: 'standard', buttonCount: 17, buttons: [12] }),
+    ).snapshot();
     expect(up.held.up).toBe(true);
 
-    const down = reader(() => fakePad({ mapping: 'standard', buttonCount: 17, buttons: [13] })).snapshot();
+    const down = reader(() =>
+      fakePad({ mapping: 'standard', buttonCount: 17, buttons: [13] }),
+    ).snapshot();
     expect(down.held.down).toBe(true);
 
-    const left = reader(() => fakePad({ mapping: 'standard', buttonCount: 17, buttons: [14] })).snapshot();
+    const left = reader(() =>
+      fakePad({ mapping: 'standard', buttonCount: 17, buttons: [14] }),
+    ).snapshot();
     expect(left.held.left).toBe(true);
 
-    const right = reader(() => fakePad({ mapping: 'standard', buttonCount: 17, buttons: [15] })).snapshot();
+    const right = reader(() =>
+      fakePad({ mapping: 'standard', buttonCount: 17, buttons: [15] }),
+    ).snapshot();
     expect(right.held.right).toBe(true);
 
-    const start = reader(() => fakePad({ mapping: 'standard', buttonCount: 17, buttons: [9] })).snapshot();
+    const start = reader(() =>
+      fakePad({ mapping: 'standard', buttonCount: 17, buttons: [9] }),
+    ).snapshot();
     expect(start.held.start).toBe(true);
 
     // Start is read generously from BOTH index 9 and index 11 regardless of the
     // reported mapping — 8BitDo pads are inconsistent about where Start lands.
-    const start11 = reader(() => fakePad({ mapping: 'standard', buttonCount: 17, buttons: [11] })).snapshot();
+    const start11 = reader(() =>
+      fakePad({ mapping: 'standard', buttonCount: 17, buttons: [11] }),
+    ).snapshot();
     expect(start11.held.start).toBe(true);
   });
 
   it('reads the left stick (axes[0]/axes[1]) as the D-pad', () => {
-    const raw = reader(() => fakePad({ mapping: 'standard', buttonCount: 17, axes: [-1, 0] })).snapshot();
+    const raw = reader(() =>
+      fakePad({ mapping: 'standard', buttonCount: 17, axes: [-1, 0] }),
+    ).snapshot();
     expect(raw.held.left).toBe(true);
   });
 
   it('maps A->cw and B->ccw the same as non-standard', () => {
-    const raw = reader(() => fakePad({ mapping: 'standard', buttonCount: 17, buttons: [0, 1] })).snapshot();
+    const raw = reader(() =>
+      fakePad({ mapping: 'standard', buttonCount: 17, buttons: [0, 1] }),
+    ).snapshot();
     expect(raw.held.cw).toBe(true);
     expect(raw.held.ccw).toBe(true);
   });

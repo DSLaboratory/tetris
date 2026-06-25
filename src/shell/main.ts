@@ -250,7 +250,8 @@ function stepConfig(): void {
 // P with a button/direction held to capture an exact snapshot to copy out — the
 // fastest way to diagnose a pad's D-pad encoding in one go.
 function dumpPads(): void {
-  const pads = typeof navigator !== 'undefined' && navigator.getGamepads ? navigator.getGamepads() : [];
+  const pads =
+    typeof navigator !== 'undefined' && navigator.getGamepads ? navigator.getGamepads() : [];
   const lines = ['=== GAMEPAD DUMP (press P) ==='];
   let any = false;
   pads.forEach((p, i) => {

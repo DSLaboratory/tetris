@@ -16,17 +16,20 @@
 // Action mapping for NES Tetris: D-pad -> up/down/left/right ; A (buttons[1]) ->
 // cw ; B (buttons[0]) -> ccw ; Start -> start. (X/Y/Select are unused in-game.)
 
-import { Button, RawInput } from './input';
+import type { Button, RawInput } from './input';
 
 const DPAD_AXIS_THRESHOLD = 0.5; // treat an axis past this as a digital D-pad press
 
 // 8BitDo SN30 (firmware V6.17) reports the W3C south/east order, so the printed
 // A button is EAST = index 1 and B is SOUTH = index 0. NES Tetris: A rotates
 // clockwise, B counter-clockwise.
-const BTN_A = 1;   // physical A (east) -> rotate CW
-const BTN_B = 0;   // physical B (south) -> rotate CCW
+const BTN_A = 1; // physical A (east) -> rotate CW
+const BTN_B = 0; // physical B (south) -> rotate CCW
 const STD_START = 9 /*, STD_SELECT = 8 */;
-const STD_D_UP = 12, STD_D_DOWN = 13, STD_D_LEFT = 14, STD_D_RIGHT = 15;
+const STD_D_UP = 12,
+  STD_D_DOWN = 13,
+  STD_D_LEFT = 14,
+  STD_D_RIGHT = 15;
 // 8BitDo SN30 non-standard (D-input) layout.
 const ALT_START = 11 /*, ALT_SELECT = 10 */;
 
@@ -37,8 +40,8 @@ const ALT_START = 11 /*, ALT_SELECT = 10 */;
 // axis is recognised by its out-of-range rest value, and decoded by snapping
 // the pressed value to one of the eight positions.
 const HAT_AXIS = 9;
-const HAT_STEP = 2 / 7;    // spacing between adjacent hat positions
-const HAT_NEUTRAL = 1.05;  // |value| beyond this means centred / not pressed
+const HAT_STEP = 2 / 7; // spacing between adjacent hat positions
+const HAT_NEUTRAL = 1.05; // |value| beyond this means centred / not pressed
 
 // Decode a hat-axis value into D-pad directions; diagonals set two flags. All
 // false when the hat is centred (out of range, or resting near 0 on a pad that
@@ -78,8 +81,13 @@ export type RawPad = { buttons: boolean[]; axes: number[] };
 // Top-down d-pad first (Up, Down, Left, Right), then the action buttons.
 export const BIND_ORDER: Button[] = ['up', 'down', 'left', 'right', 'ccw', 'cw', 'start'];
 export const BIND_LABELS: Record<Button, string> = {
-  up: 'Up', down: 'Down (soft drop)', left: 'Left', right: 'Right',
-  cw: 'Rotate CW', ccw: 'Rotate CCW', start: 'Start / Pause',
+  up: 'Up',
+  down: 'Down (soft drop)',
+  left: 'Left',
+  right: 'Right',
+  cw: 'Rotate CW',
+  ccw: 'Rotate CCW',
+  start: 'Start / Pause',
 };
 
 // The newly-activated input vs a neutral baseline: a button that went down, or an
@@ -107,8 +115,10 @@ export function detectBind(rest: RawPad, now: RawPad): Bind | null {
 export function padReleased(s: RawPad): boolean {
   // A hat axis at neutral rests OUTSIDE [-1, 1], so treat that as released too;
   // otherwise the "release, then press" step could never complete on an 8BitDo.
-  return s.buttons.every((b) => !b)
-    && s.axes.every((a) => Math.abs(a) < DPAD_AXIS_THRESHOLD || Math.abs(a) > HAT_NEUTRAL);
+  return (
+    s.buttons.every((b) => !b) &&
+    s.axes.every((a) => Math.abs(a) < DPAD_AXIS_THRESHOLD || Math.abs(a) > HAT_NEUTRAL)
+  );
 }
 
 export function bindLabel(b: Bind): string {
@@ -119,18 +129,26 @@ export function bindLabel(b: Bind): string {
 
 const bindKey = (padId: string): string => `tetris.pad.${padId}`;
 export function saveBinding(padId: string, binding: Binding): void {
-  try { localStorage.setItem(bindKey(padId), JSON.stringify(binding)); } catch { /* ignore */ }
+  try {
+    localStorage.setItem(bindKey(padId), JSON.stringify(binding));
+  } catch {
+    /* ignore */
+  }
 }
 function loadBinding(padId: string): Binding | null {
-  try { const raw = localStorage.getItem(bindKey(padId)); return raw ? (JSON.parse(raw) as Binding) : null; }
-  catch { return null; }
+  try {
+    const raw = localStorage.getItem(bindKey(padId));
+    return raw ? (JSON.parse(raw) as Binding) : null;
+  } catch {
+    return null;
+  }
 }
 
 export interface GamepadInfo {
   id: string;
   mapping: string;
   buttonsDown: number[]; // indices currently pressed
-  axes: number[];        // rounded
+  axes: number[]; // rounded
 }
 
 export class GamepadInput {
@@ -141,10 +159,14 @@ export class GamepadInput {
   private binding: Binding | null = null; // this pad's saved remap, or null = SN30 defaults
   private bindingId: string | null = null;
 
-  constructor(opts: { target?: Window; getPads?: () => (Gamepad | null)[]; playerIndex?: number } = {}) {
+  constructor(
+    opts: { target?: Window; getPads?: () => (Gamepad | null)[]; playerIndex?: number } = {},
+  ) {
     this.playerIndex = opts.playerIndex ?? 0;
-    this.getPads = opts.getPads
-      ?? (() => (typeof navigator !== 'undefined' && navigator.getGamepads ? navigator.getGamepads() : []));
+    this.getPads =
+      opts.getPads ??
+      (() =>
+        typeof navigator !== 'undefined' && navigator.getGamepads ? navigator.getGamepads() : []);
     const target = opts.target ?? (typeof window !== 'undefined' ? window : undefined);
     if (target) {
       target.addEventListener('gamepadconnected', (e) => {
@@ -166,7 +188,7 @@ export class GamepadInput {
   private active(): Gamepad | null {
     let n = 0;
     for (const p of this.getPads()) {
-      if (p && p.connected) {
+      if (p?.connected) {
         if (n === this.playerIndex) return p;
         n++;
       }
@@ -179,7 +201,9 @@ export class GamepadInput {
     const pad = this.active();
     if (!pad) return null;
     const buttonsDown: number[] = [];
-    pad.buttons.forEach((b, i) => { if (b.pressed) buttonsDown.push(i); });
+    pad.buttons.forEach((b, i) => {
+      if (b.pressed) buttonsDown.push(i);
+    });
     return {
       id: pad.id,
       mapping: pad.mapping || 'non-standard',
@@ -194,9 +218,13 @@ export class GamepadInput {
     if (!pad) return null;
     return { buttons: pad.buttons.map((b) => b.pressed), axes: pad.axes.map((a) => a) };
   }
-  activePadId(): string | null { return this.active()?.id ?? null; }
+  activePadId(): string | null {
+    return this.active()?.id ?? null;
+  }
   // Drop the cached binding so the next snapshot reloads it (after a config save).
-  reloadBinding(): void { this.bindingId = null; }
+  reloadBinding(): void {
+    this.bindingId = null;
+  }
 
   private syncBinding(pad: Gamepad): void {
     if (pad.id === this.bindingId) return;
@@ -231,7 +259,8 @@ export class GamepadInput {
     } else {
       const btn = (i: number): boolean => pad.buttons[i]?.pressed ?? false;
       const ax = (i: number): number => pad.axes[i] ?? 0;
-      const ax0 = ax(0), ax1 = ax(1);
+      const ax0 = ax(0),
+        ax1 = ax(1);
       // D-pad can arrive three ways: a POV hat (8BitDo SF30/SN30 Pro), a stick
       // on axes[0/1], or the standard buttons 12-15. Accept all of them.
       const hat = hatDirections(ax(HAT_AXIS));
@@ -239,8 +268,8 @@ export class GamepadInput {
       held.right = ax0 > DPAD_AXIS_THRESHOLD || btn(STD_D_RIGHT) || hat.right;
       held.up = ax1 < -DPAD_AXIS_THRESHOLD || btn(STD_D_UP) || hat.up;
       held.down = ax1 > DPAD_AXIS_THRESHOLD || btn(STD_D_DOWN) || hat.down;
-      held.cw = btn(BTN_A);   // A (east, 1) -> CW
-      held.ccw = btn(BTN_B);  // B (south, 0) -> CCW
+      held.cw = btn(BTN_A); // A (east, 1) -> CW
+      held.ccw = btn(BTN_B); // B (south, 0) -> CCW
       held.start = btn(STD_START) || btn(ALT_START);
     }
 
