@@ -29,6 +29,7 @@ Other commands:
 npm test         # run the mechanics test suite (64 tests)
 npm run check    # typecheck
 npm run build    # production build to dist/
+npm run build:deploy  # production build based at /games/tetris/ (davidslv.uk deploy)
 ```
 
 ## Install & play offline
