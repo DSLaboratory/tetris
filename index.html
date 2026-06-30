@@ -4,6 +4,17 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
   <title>NES Tetris — mechanics as they were</title>
+  <meta name="description" content="A faithful study of NES Tetris mechanics — no hold, no ghost, no hard drop. Zero assets, plays fully offline in the browser." />
+  <meta name="theme-color" content="#101014" />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <!-- PWA: installable + offline (service worker in sw.js), and chromeless fullscreen on iOS
+       when added to the Home Screen. -->
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Tetris" />
+  <meta name="mobile-web-app-capable" content="yes" />
   <style>
     html, body { margin: 0; height: 100%; background: #101014; }
     body {

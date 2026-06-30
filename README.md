@@ -31,6 +31,19 @@ npm run check    # typecheck
 npm run build    # production build to dist/
 ```
 
+## Install & play offline
+
+The game is zero-asset — the board is code-drawn and every sound is synthesised
+with the Web Audio API, so there are no runtime network calls. A small PWA layer
+(`public/manifest.webmanifest` + `public/sw.js`) makes that installable: on the
+first online visit the service worker precaches the app shell and the hashed
+bundle, so the game launches with **no network** thereafter.
+
+On a phone, open the deployed page and choose **Add to Home Screen** (Safari) or
+**Install app** (Chrome). It then opens fullscreen and plays fully offline — in
+flight mode, underground, anywhere. The service worker is registered in
+production builds only, so the dev server and the test suite are unaffected.
+
 ## How to play
 
 **Menu**: Up/Down switches mode (classic / horizontal), Left/Right or the

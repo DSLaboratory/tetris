@@ -499,4 +499,10 @@ function loop(now: number): void {
   versusPaused,
 });
 
+// PWA: register the service worker so "Add to Home Screen" launches the game with no network.
+// PROD-only — keeps the dev server and any headless verification free of a controlling worker.
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`).catch(() => {});
+}
+
 requestAnimationFrame(loop);
